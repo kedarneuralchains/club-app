@@ -41,7 +41,9 @@ alter table votes   enable row level security;
 -- Ballots: anyone can read status/metadata (meeting_code is low-sensitivity for this threat model)
 create policy "public read ballots"  on ballots for select using (true);
 
--- Ballots: no insert/update/delete policies — only service role (admin) can write
+-- Ballots: anon can insert/update (admin panel uses the anon key)
+create policy "anon insert ballots" on ballots for insert with check (true);
+create policy "anon update ballots" on ballots for update using (true);
 
 -- Votes: anon can insert only when the ballot is open
 create policy "anon insert votes" on votes for insert

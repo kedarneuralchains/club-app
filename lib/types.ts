@@ -1,11 +1,18 @@
 export type BallotStatus = 'not_started' | 'open' | 'closed';
 
+export interface TTSpeaker {
+  id: string;        // member UUID, or "guest-{timestamp}" for guests
+  name: string;      // display_name for members, entered name for guests
+  is_guest: boolean;
+}
+
 export interface Ballot {
   id: string;
   meeting_id: string;
   status: BallotStatus;
   meeting_code: string | null;
   voter_count: number | null;
+  table_topics_speakers: TTSpeaker[];
   opened_at: string | null;
   closed_at: string | null;
   created_at: string;
@@ -13,7 +20,7 @@ export interface Ballot {
 
 export interface VoteResult {
   category: string;
-  voted_for_member_id: string;
+  voted_for_member_id: string | null;
   voted_for_display_name: string;
   vote_count: number;
 }

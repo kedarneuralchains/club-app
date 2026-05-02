@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import type { Ballot, MeetingWithClaims, Member } from '@/lib/types';
+import { ROLE_META } from '@/lib/types';
+import type { RoleKey } from '@/lib/types';
 
 interface Props {
   ballot: Ballot;
@@ -12,20 +14,33 @@ interface Props {
   onClose: () => void;
 }
 
-type VoteCategory = 'speaker' | 'evaluator' | 'table_topics';
-interface Candidate { id: string; name: string }
+interface Candidate {
+  id: string;       // member UUID or "guest-{id}" for TT guests
+  label: string;    // what to display on the button
+  memberId: string | null;   // null for guests
+  guestName: string | null;  // set for guests
+}
+
+type VoteCategory = 'speaker' | 'evaluator' | 'table_topics' | 'role_player' | 'aux_role';
+
+const CAT_META: Record<VoteCategory, { label: string; emoji: string }> = {
+  speaker:      { label: 'Best Speaker',               emoji: '🎙️' },
+  evaluator:    { label: 'Best Evaluator',              emoji: '⚖️' },
+  table_topics: { label: 'Best Table Topics Speaker',   emoji: '💬' },
+  role_player:  { label: 'Best Role Player',            emoji: '🎤' },
+  aux_role:     { label: 'Best Auxiliary Role Player',  emoji: '⏱️' },
+};
+
+const ROLE_PLAYER_KEYS: RoleKey[] = ['tmod', 'ge', 'ttm'];
+const AUX_ROLE_KEYS:    RoleKey[] = ['timer', 'grammarian', 'ah_counter', 'harkmaster'];
 
 export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, onClose }: Props) {
   const supabase = createClient();
 
-  const [checking, setChecking] = useState(true);
-  const [alreadyVoted, setAlreadyVoted] = useState(false);
-
-  const [selections, setSelections] = useState<Record<VoteCategory, string>>({
-    speaker: '', evaluator: '', table_topics: '',
-  });
+  const [selections, setSelections] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [alreadyVoted, setAlreadyVoted] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [voteCount, setVoteCount] = useState<number | null>(null);
 
@@ -34,17 +49,6 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
     setVoteCount(data ?? 0);
   }, [ballot.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check if this device has already voted on mount
-  useEffect(() => {
-    supabase
-      .rpc('has_device_voted', { p_ballot_id: ballot.id, p_device_uuid: deviceId })
-      .then(({ data }) => {
-        setAlreadyVoted(!!data);
-        setChecking(false);
-      });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Poll vote count once submitted or already voted
   useEffect(() => {
     if (!submitted && !alreadyVoted) return;
     fetchVoteCount();
@@ -52,41 +56,72 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
     return () => clearInterval(id);
   }, [submitted, alreadyVoted, fetchVoteCount]);
 
-  // Build candidate lists (self-vote allowed)
+  // Build candidate lists
   const speakerCandidates: Candidate[] = meeting.role_claims
     .filter(c => c.role_key === 'speaker')
-    .map(c => ({ id: c.member_id, name: c.member?.display_name ?? c.member?.name ?? 'Unknown' }));
+    .map(c => ({ id: c.member_id, label: `TM ${c.member?.display_name ?? '?'}`, memberId: c.member_id, guestName: null }));
 
   const evaluatorCandidates: Candidate[] = meeting.role_claims
     .filter(c => c.role_key === 'evaluator')
-    .map(c => ({ id: c.member_id, name: c.member?.display_name ?? c.member?.name ?? 'Unknown' }));
+    .map(c => ({ id: c.member_id, label: `TM ${c.member?.display_name ?? '?'}`, memberId: c.member_id, guestName: null }));
 
-  const isRegular = meeting.meeting_type === 'regular';
-  const ttCandidates: Candidate[] = isRegular
-    ? allMembers.map(m => ({ id: m.id, name: m.display_name }))
-    : [];
+  const ttCandidates: Candidate[] = ballot.table_topics_speakers.map(s => ({
+    id: s.id,
+    label: s.is_guest ? `${s.name} (Guest)` : `TM ${s.name}`,
+    memberId: s.is_guest ? null : s.id,
+    guestName: s.is_guest ? s.name : null,
+  }));
 
-  type CategoryDef = { key: VoteCategory; label: string; emoji: string; candidates: Candidate[] };
-  const categories: CategoryDef[] = [
-    { key: 'speaker',      label: 'Best Speaker',      emoji: '🎙️', candidates: speakerCandidates },
-    { key: 'evaluator',    label: 'Best Evaluator',    emoji: '⚖️', candidates: evaluatorCandidates },
-    ...(isRegular ? [{ key: 'table_topics' as VoteCategory, label: 'Best Table Topics', emoji: '💬', candidates: ttCandidates }] : []),
-  ];
+  const roleCandidates: Candidate[] = ROLE_PLAYER_KEYS.flatMap(roleKey =>
+    meeting.role_claims
+      .filter(c => c.role_key === roleKey)
+      .map(c => ({
+        id: c.member_id + ':' + roleKey,
+        label: `TM ${c.member?.display_name ?? '?'} · ${ROLE_META[roleKey].label}`,
+        memberId: c.member_id,
+        guestName: null,
+      }))
+  );
 
-  const allSelected = categories.every(c => selections[c.key] !== '');
+  const auxCandidates: Candidate[] = AUX_ROLE_KEYS.flatMap(roleKey =>
+    meeting.role_claims
+      .filter(c => c.role_key === roleKey)
+      .map(c => ({
+        id: c.member_id + ':' + roleKey,
+        label: `TM ${c.member?.display_name ?? '?'} · ${ROLE_META[roleKey].label}`,
+        memberId: c.member_id,
+        guestName: null,
+      }))
+  );
+
+  const categories: { key: VoteCategory; candidates: Candidate[] }[] = (
+    [
+      { key: 'speaker'      as VoteCategory, candidates: speakerCandidates },
+      { key: 'evaluator'    as VoteCategory, candidates: evaluatorCandidates },
+      { key: 'table_topics' as VoteCategory, candidates: ttCandidates },
+      { key: 'role_player'  as VoteCategory, candidates: roleCandidates },
+      { key: 'aux_role'     as VoteCategory, candidates: auxCandidates },
+    ] as { key: VoteCategory; candidates: Candidate[] }[]
+  ).filter(c => c.candidates.length > 0);
+
+  const allSelected = categories.every(c => !!selections[c.key]);
 
   async function handleSubmit() {
     if (!allSelected || submitting) return;
     setSubmitting(true);
     setSubmitError('');
 
-    const rows = categories.map(c => ({
-      ballot_id: ballot.id,
-      device_uuid: deviceId,
-      voter_member_id: memberId,
-      category: c.key,
-      voted_for_member_id: selections[c.key],
-    }));
+    const rows = categories.map(c => {
+      const candidate = c.candidates.find(cand => cand.id === selections[c.key])!;
+      return {
+        ballot_id: ballot.id,
+        device_uuid: deviceId,
+        voter_member_id: memberId === 'guest' ? null : memberId,
+        category: c.key,
+        voted_for_member_id: candidate.memberId ?? null,
+        voted_for_name: candidate.guestName ?? null,
+      };
+    });
 
     const { error } = await supabase.from('votes').insert(rows);
     if (error) {
@@ -117,24 +152,31 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
         <div className="bg-maroon-700 px-5 py-4 flex items-center justify-between shrink-0">
           <div>
             <h2 className="font-bold text-white text-lg">Meeting #{meeting.number} — Ballot</h2>
-            <p className="text-xs text-white/60 mt-0.5">One vote per device per category</p>
+            <p className="text-xs text-white/60 mt-0.5">Select one in each category, then submit</p>
           </div>
           <button onClick={onClose} className="text-white/60 hover:text-white text-xl tap-target px-2">✕</button>
         </div>
 
-        <div className="p-5 overflow-y-auto">
+        <div className="p-5 overflow-y-auto space-y-6">
 
-          {/* ── Checking ── */}
-          {checking && (
-            <div className="py-10 text-center text-stone-400 text-sm">Checking…</div>
+          {/* ── Already voted (from DB constraint) ── */}
+          {alreadyVoted && (
+            <div className="text-center py-6 space-y-2">
+              <div className="text-4xl">✓</div>
+              <p className="font-semibold text-stone-800">Your vote is already recorded</p>
+              <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
+              {voteCount !== null && (
+                <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
+              )}
+            </div>
           )}
 
-          {/* ── Already voted ── */}
-          {!checking && alreadyVoted && !submitted && (
-            <div className="text-center py-8 space-y-3">
-              <div className="text-5xl">✓</div>
-              <p className="text-base font-semibold text-stone-800">Your vote is already recorded</p>
-              <p className="text-sm text-stone-400">Results will be revealed when the admin closes voting.</p>
+          {/* ── Submitted ── */}
+          {submitted && !alreadyVoted && (
+            <div className="text-center py-6 space-y-2">
+              <div className="text-4xl">✓</div>
+              <p className="font-semibold text-stone-800">Vote submitted!</p>
+              <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
               {voteCount !== null && (
                 <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
               )}
@@ -142,16 +184,15 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
           )}
 
           {/* ── Ballot form ── */}
-          {!checking && !alreadyVoted && !submitted && (
-            <div className="space-y-6">
-              {categories.map(cat => (
-                <div key={cat.key}>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">
-                    {cat.emoji} {cat.label}
-                  </p>
-                  {cat.candidates.length === 0 ? (
-                    <p className="text-sm text-stone-300 italic">No candidates in this category</p>
-                  ) : (
+          {!submitted && !alreadyVoted && (
+            <>
+              {categories.map(cat => {
+                const meta = CAT_META[cat.key];
+                return (
+                  <div key={cat.key}>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">
+                      {meta.emoji} {meta.label}
+                    </p>
                     <div className="space-y-1.5">
                       {cat.candidates.map(c => (
                         <button
@@ -163,13 +204,13 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
                               : 'bg-stone-50 text-stone-700 border-stone-100 hover:border-maroon-300 hover:bg-maroon-50'
                             }`}
                         >
-                          TM {c.name}
+                          {c.label}
                         </button>
                       ))}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
 
               {submitError && <p className="text-sm text-red-500">{submitError}</p>}
 
@@ -182,23 +223,11 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
                 {submitting ? 'Submitting…' : 'Submit Ballot'}
               </button>
               {!allSelected && (
-                <p className="text-xs text-stone-400 text-center -mt-3">
-                  Select one name in each category to enable submit
+                <p className="text-xs text-stone-400 text-center -mt-4">
+                  Select one per category to enable submit
                 </p>
               )}
-            </div>
-          )}
-
-          {/* ── Submitted ── */}
-          {submitted && (
-            <div className="text-center py-8 space-y-3">
-              <div className="text-5xl">✓</div>
-              <p className="text-base font-semibold text-stone-800">Vote submitted!</p>
-              <p className="text-sm text-stone-400">Results will be revealed when the admin closes voting.</p>
-              {voteCount !== null && (
-                <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
-              )}
-            </div>
+            </>
           )}
 
         </div>
