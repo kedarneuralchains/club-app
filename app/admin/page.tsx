@@ -25,7 +25,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-navy-600 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 w-full max-w-sm">
         <h1 className="font-serif text-2xl font-bold text-stone-900 mb-1">Admin</h1>
         <p className="text-stone-500 text-sm mb-6">Dehradun WIC Toastmasters</p>
@@ -327,16 +327,16 @@ function AdminPanel() {
     : members;
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="flex flex-col items-start gap-0.5">
-            <Image src="/logo.png" alt="Toastmasters International" width={140} height={25} className="h-6 w-auto" priority />
-            <span className="text-[10px] font-semibold tracking-wide text-navy-600 leading-none">Admin Panel</span>
+    <div className="min-h-screen bg-navy-600">
+      <header className="sticky top-0 z-40 bg-maroon-700 shadow-md">
+        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex flex-col items-start gap-1">
+            <Image src="/logo.png" alt="Toastmasters International" width={180} height={32} className="h-8 w-auto brightness-0 invert" priority />
+            <span className="text-[10px] font-semibold tracking-wide text-white/60 leading-none">Admin Panel</span>
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Admin</span>
-            <button onClick={logout} className="text-xs text-stone-400 hover:text-stone-600 tap-target px-2">
+            <span className="text-xs font-semibold text-yellow-200 bg-white/10 px-2.5 py-1 rounded-full">Admin</span>
+            <button onClick={logout} className="text-xs text-white/60 hover:text-white tap-target px-2 transition-colors">
               Sign out
             </button>
           </div>
@@ -345,13 +345,13 @@ function AdminPanel() {
 
       <div className="max-w-2xl mx-auto px-4 pt-4">
         {/* Tabs */}
-        <div className="flex gap-1 bg-stone-100 p-1 rounded-xl mb-6">
+        <div className="flex gap-1 bg-white/10 p-1 rounded-xl mb-6">
           {(['meetings', 'members'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-colors tap-target
-                ${tab === t ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
+                ${tab === t ? 'bg-white text-navy-700 shadow-sm' : 'text-white/60 hover:text-white'}`}
             >
               {t}
             </button>
@@ -360,7 +360,7 @@ function AdminPanel() {
 
         {loading ? (
           <div className="space-y-3">
-            {[1,2,3].map(i => <div key={i} className="bg-white rounded-2xl h-32 animate-pulse border border-stone-100"/>)}
+            {[1,2,3].map(i => <div key={i} className="bg-white/10 rounded-2xl h-32 animate-pulse" />)}
           </div>
         ) : tab === 'meetings' ? (
           <div className="space-y-4 pb-8">
@@ -412,7 +412,7 @@ function AdminPanel() {
                     <div className="flex gap-3 mt-2 px-1">
                       <button
                         onClick={() => setEditingMeeting(m)}
-                        className="text-xs text-stone-500 hover:text-maroon-700 tap-target px-2 py-1"
+                        className="text-xs text-white/60 hover:text-yellow-200 tap-target px-2 py-1"
                       >
                         Edit meeting
                       </button>
@@ -442,7 +442,7 @@ function AdminPanel() {
                   className={`text-xs font-medium px-3 py-1.5 rounded-full tap-target transition-colors
                     ${memberFilter === f
                       ? 'bg-maroon-700 text-white'
-                      : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
+                      : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
                 >
                   {f === 'active' ? 'Active' : 'All members'}
                 </button>

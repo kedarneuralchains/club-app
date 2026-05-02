@@ -27,13 +27,13 @@ export default function Home() {
   const showPicker = loaded && !memberId && members.length > 0;
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-navy-600">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex flex-col items-start gap-0.5">
-            <Image src="/logo.png" alt="Toastmasters International" width={160} height={29} className="h-7 w-auto" priority />
-            <span className="text-[10px] font-semibold tracking-wide text-navy-600 leading-none">
+      <header className="sticky top-0 z-40 bg-maroon-700 shadow-md">
+        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex flex-col items-start gap-1">
+            <Image src="/logo.png" alt="Toastmasters International" width={200} height={36} className="h-9 w-auto brightness-0 invert" priority />
+            <span className="text-[10px] font-semibold tracking-wide text-white/60 leading-none">
               Dehradun WIC India · Club #03295206
             </span>
           </div>
@@ -41,8 +41,8 @@ export default function Home() {
           <div className="flex items-center gap-3">
             {currentMember && (
               <div className="text-right">
-                <p className="text-xs text-stone-500 leading-none">Signed in as</p>
-                <p className="text-sm font-semibold text-maroon-700 leading-tight truncate max-w-[120px]">
+                <p className="text-xs text-white/50 leading-none">Signed in as</p>
+                <p className="text-sm font-semibold text-yellow-200 leading-tight truncate max-w-[120px]">
                   {currentMember.display_name}
                 </p>
               </div>
@@ -50,14 +50,14 @@ export default function Home() {
             {loaded && (
               <button
                 onClick={clearIdentity}
-                className="text-xs text-stone-400 hover:text-maroon-600 tap-target px-2 py-1"
+                className="text-xs text-white/60 hover:text-white tap-target px-2 py-1 transition-colors"
               >
                 {memberId ? 'Switch' : 'Pick name'}
               </button>
             )}
             <Link
               href="/admin"
-              className="text-xs text-stone-300 hover:text-stone-500 tap-target px-2 py-1"
+              className="text-xs text-white/30 hover:text-white/60 tap-target px-2 py-1 transition-colors"
             >
               Admin
             </Link>
@@ -69,7 +69,7 @@ export default function Home() {
         {loading && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-2xl h-64 animate-pulse border border-stone-100" />
+              <div key={i} className="bg-white/10 rounded-2xl h-64 animate-pulse" />
             ))}
           </div>
         )}
@@ -79,7 +79,7 @@ export default function Home() {
             {/* Upcoming meetings */}
             {upcoming.length > 0 && (
               <section>
-                <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-3">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-3">
                   Upcoming Meetings
                 </h2>
                 <div className="space-y-4">
@@ -100,7 +100,7 @@ export default function Home() {
             {/* Past meetings */}
             {past.length > 0 && (
               <section>
-                <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-3">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-3">
                   Recent Meetings
                 </h2>
                 <div className="space-y-4">
@@ -120,8 +120,8 @@ export default function Home() {
 
             {upcoming.length === 0 && past.length === 0 && (
               <div className="text-center py-16">
-                <p className="text-stone-400">No meetings yet.</p>
-                <Link href="/admin" className="text-sm text-maroon-600 mt-2 inline-block">
+                <p className="text-white/40">No meetings yet.</p>
+                <Link href="/admin" className="text-sm text-yellow-200 mt-2 inline-block">
                   Add one in Admin →
                 </Link>
               </div>
