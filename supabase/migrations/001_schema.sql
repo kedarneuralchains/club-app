@@ -67,8 +67,10 @@ create policy "public read role_claims" on role_claims for select using (true);
 create policy "anon insert role_claims" on role_claims for insert with check (true);
 create policy "anon delete role_claims" on role_claims for delete using (true);
 
--- Admin operations (add/edit meetings, manage members) use the service role key
--- from the import script and the admin UI API route, bypassing RLS entirely.
+-- Admin UI uses anon key — allow meeting writes (URL is hidden, page is password-gated)
+create policy "anon insert meetings" on meetings for insert with check (true);
+create policy "anon update meetings" on meetings for update  using (true);
+create policy "anon delete meetings" on meetings for delete  using (true);
 
 -- ============================================================
 -- Realtime
