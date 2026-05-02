@@ -14,10 +14,11 @@ interface Props {
   deviceId?: string | null;
   ballot?: Ballot;
   isAdmin: boolean;
+  hideWhatsApp?: boolean;
   onChanged: () => void;
 }
 
-export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, isAdmin, onChanged }: Props) {
+export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, isAdmin, hideWhatsApp, onChanged }: Props) {
   const [showBallot, setShowBallot] = useState(false);
   const locked = isMeetingLocked(meeting);
   const past = isMeetingPast(meeting);
@@ -91,7 +92,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
                 Voting closed
               </span>
             )}
-            {!past && (
+            {!past && !hideWhatsApp && (
               <WhatsAppCopyButton meeting={meeting} members={allMembers} />
             )}
           </div>
@@ -119,6 +120,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
+              allMembers={allMembers}
               onChanged={onChanged}
             />
           ))}
@@ -137,6 +139,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
+              allMembers={allMembers}
               onChanged={onChanged}
             />
           ))}
@@ -155,6 +158,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
+              allMembers={allMembers}
               onChanged={onChanged}
             />
           ))}
@@ -173,6 +177,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
+              allMembers={allMembers}
               onChanged={onChanged}
             />
           ))}

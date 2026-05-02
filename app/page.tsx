@@ -11,8 +11,8 @@ import Image from 'next/image';
 type Tab = 'next' | 'upcoming' | 'past';
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'next',     label: 'Next Meeting' },
-  { id: 'upcoming', label: 'Upcoming' },
+  { id: 'next',     label: 'Upcoming Meeting' },
+  { id: 'upcoming', label: 'Future Meetings' },
   { id: 'past',     label: 'Past' },
 ];
 
@@ -21,7 +21,8 @@ export default function Home() {
   const { memberId, deviceId, loaded, identify, clearIdentity } = useIdentity();
   const [activeTab, setActiveTab] = useState<Tab>('next');
 
-  const currentMember = members.find((m) => m.id === memberId);
+  const isGuest = memberId === 'guest';
+  const currentMember = isGuest ? null : members.find((m) => m.id === memberId);
 
   const future = meetings
     .filter((m) => !isMeetingPast(m))
@@ -47,6 +48,7 @@ export default function Home() {
   };
 
   const showPicker = loaded && !memberId && members.length > 0;
+  function handleGuest() { identify('guest'); }
 
   return (
     <div className="min-h-screen bg-navy-600">
@@ -69,6 +71,9 @@ export default function Home() {
               <span className="text-xs font-semibold text-yellow-200 truncate max-w-[80px]">
                 {currentMember.display_name}
               </span>
+            )}
+            {isGuest && (
+              <span className="text-xs text-white/40 truncate max-w-[60px]">Guest</span>
             )}
             {loaded && (
               <button
@@ -131,6 +136,7 @@ export default function Home() {
                 deviceId={deviceId}
                 ballot={ballots.get(m.id)}
                 isAdmin={false}
+                hideWhatsApp={activeTab !== 'next'}
                 onChanged={refetch}
               />
             ))}
@@ -139,7 +145,7 @@ export default function Home() {
       </main>
 
       {/* Member picker overlay */}
-      {showPicker && <MemberPicker members={members} onSelect={identify} />}
+      {showPicker && <MemberPicker members={members} onSelect={identify} onGuest={handleGuest} />}
     </div>
   );
 }

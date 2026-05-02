@@ -311,7 +311,12 @@ function AdminPanel() {
 
   async function addMember(name: string) {
     const membershipNo = `MANUAL-${Date.now()}`;
-    const displayName = name.split(' ')[0];
+    const firstName = name.split(' ')[0];
+    const existingDisplayNames = members.map((m) => m.display_name.toLowerCase());
+    // If first name already taken, use "First Last" to distinguish
+    const displayName = existingDisplayNames.includes(firstName.toLowerCase())
+      ? name.split(' ').slice(0, 2).join(' ')
+      : firstName;
     await supabase.from('members').insert({
       membership_no: membershipNo,
       name,
