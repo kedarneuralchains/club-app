@@ -31,11 +31,14 @@ export default function Home() {
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-maroon-700 shadow-md">
         <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex flex-col items-start gap-1">
-            <Image src="/logo.png" alt="Toastmasters International" width={200} height={36} className="h-9 w-auto brightness-0 invert" priority />
-            <span className="text-[10px] font-semibold tracking-wide text-white/60 leading-none">
-              Dehradun WIC India · Club #03295206
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="bg-white rounded-md px-2 py-0.5 shadow-sm shrink-0">
+              <Image src="/logo.png" alt="Toastmasters International" width={120} height={28} className="h-7 w-auto" priority />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-white leading-tight">Dehradun WIC India Toastmasters Club</p>
+              <p className="text-[9px] text-white/55 leading-none mt-0.5">Club No. 03295206 | Area 03 | Division I | District 41</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

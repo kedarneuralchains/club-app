@@ -28,7 +28,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
     <div className="min-h-screen bg-navy-600 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 w-full max-w-sm">
         <h1 className="font-serif text-2xl font-bold text-stone-900 mb-1">Admin</h1>
-        <p className="text-stone-500 text-sm mb-6">Dehradun WIC Toastmasters</p>
+        <p className="text-stone-500 text-sm mb-6">Dehradun WIC India Toastmasters Club</p>
         <form onSubmit={submit} className="space-y-4">
           <input
             type="password"
@@ -333,9 +333,14 @@ function AdminPanel() {
     <div className="min-h-screen bg-navy-600">
       <header className="sticky top-0 z-40 bg-maroon-700 shadow-md">
         <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex flex-col items-start gap-1">
-            <Image src="/logo.png" alt="Toastmasters International" width={180} height={32} className="h-8 w-auto brightness-0 invert" priority />
-            <span className="text-[10px] font-semibold tracking-wide text-white/60 leading-none">Admin Panel</span>
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="bg-white rounded-md px-2 py-0.5 shadow-sm shrink-0">
+              <Image src="/logo.png" alt="Toastmasters International" width={120} height={28} className="h-7 w-auto" priority />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-white leading-tight">Admin Panel</p>
+              <p className="text-[9px] text-white/55 leading-none mt-0.5">Dehradun WIC India Toastmasters Club</p>
+            </div>
           </Link>
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold text-yellow-200 bg-white/10 px-2.5 py-1 rounded-full">Admin</span>
