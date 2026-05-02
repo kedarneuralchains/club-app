@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { MeetingCard } from '@/components/MeetingCard';
 import type { Member, MeetingWithClaims, MeetingType, Ballot, VoteResult } from '@/lib/types';
+import { isMeetingPast } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -431,11 +432,14 @@ function AdminPanel() {
                         Delete
                       </button>
                     </div>
-                    <VotingControls
-                      meeting={m}
-                      ballot={ballotsMap.get(m.id) ?? null}
-                      onChanged={fetchAll}
-                    />
+                    {/* Show voting controls for upcoming/today meetings, or any meeting that already has a ballot */}
+                    {(!isMeetingPast(m) || (ballotsMap.get(m.id)?.status ?? 'not_started') !== 'not_started') && (
+                      <VotingControls
+                        meeting={m}
+                        ballot={ballotsMap.get(m.id) ?? null}
+                        onChanged={fetchAll}
+                      />
+                    )}
                   </div>
                 )}
               </div>

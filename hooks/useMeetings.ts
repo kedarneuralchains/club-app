@@ -17,7 +17,7 @@ export function useMeetings() {
         .from('meetings')
         .select('*, role_claims(*, member:members(*))')
         .order('number', { ascending: false })
-        .limit(6),
+        .limit(20),
       supabase.from('members').select('*').eq('active', true).order('name'),
       supabase.from('ballots').select('*'),
     ]);
@@ -32,10 +32,11 @@ export function useMeetings() {
     fetchAll();
   }, [fetchAll]);
 
-  // Realtime: re-fetch when claims or ballot status changes
+  // Realtime: re-fetch when meetings, claims, or ballot status changes
   useEffect(() => {
     const channel = supabase
       .channel('tm_public_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'role_claims' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ballots' }, () => fetchAll())
       .subscribe();
