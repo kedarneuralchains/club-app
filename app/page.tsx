@@ -4,6 +4,7 @@ import { useMeetings } from '@/hooks/useMeetings';
 import { useIdentity } from '@/hooks/useIdentity';
 import { MeetingCard } from '@/components/MeetingCard';
 import { MemberPicker } from '@/components/MemberPicker';
+import { SiteFooter } from '@/components/SiteFooter';
 import { isMeetingPast } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -143,6 +144,8 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <SiteFooter />
 
       {/* Member picker overlay */}
       {showPicker && <MemberPicker members={members} onSelect={identify} onGuest={handleGuest} />}

@@ -1,21 +1,18 @@
 import type { Meeting, MeetingWithClaims, Member, RoleKey } from './types';
 
-const VALID_PAIRS = new Set([
-  'speaker:evaluator',
-  'evaluator:speaker',
-  'evaluator:ge',
-  'ge:evaluator',
-]);
+const TAG_ROLES: RoleKey[] = ['grammarian', 'ah_counter', 'timer', 'harkmaster'];
 
 export function roleClaimBlocked(
   targetRole: RoleKey,
   existingRoles: RoleKey[]
 ): string | null {
   if (existingRoles.length === 0) return null;
-  if (existingRoles.includes('tmod')) return 'TMoD cannot take another role';
-  if (targetRole === 'tmod') return 'TMoD cannot be combined with other roles';
-  for (const existing of existingRoles) {
-    if (!VALID_PAIRS.has(`${existing}:${targetRole}`)) return 'This pair is not allowed';
+  if (existingRoles.includes('tmod')) return 'TMoD cannot take other roles';
+  if (targetRole === 'tmod') return 'TMoD must be the only role';
+  if (existingRoles.length >= 3) return 'Max 3 roles per meeting';
+  if (targetRole === 'speaker' && existingRoles.includes('speaker')) return 'Cannot take two speaker slots';
+  if (TAG_ROLES.includes(targetRole) && existingRoles.some((r) => TAG_ROLES.includes(r))) {
+    return 'Only one tag role per member';
   }
   return null;
 }

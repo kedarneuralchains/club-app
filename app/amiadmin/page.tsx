@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { MeetingCard } from '@/components/MeetingCard';
+import { SiteFooter } from '@/components/SiteFooter';
 import type { Member, MeetingWithClaims, MeetingType, Ballot, VoteResult } from '@/lib/types';
 import { isMeetingPast } from '@/lib/utils';
 import Link from 'next/link';
@@ -338,17 +339,15 @@ function AdminPanel() {
   return (
     <div className="min-h-screen bg-navy-600">
       <header className="sticky top-0 z-40 bg-maroon-700 shadow-md">
-        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="bg-white rounded-md px-2 py-0.5 shadow-sm shrink-0">
-              <Image src="/logo.png" alt="Toastmasters International" width={120} height={28} className="h-7 w-auto" priority />
+        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
+          <Link href="/" className="flex flex-col items-start justify-center gap-0.5 flex-1 min-w-0 overflow-hidden">
+            <div className="bg-white rounded-md px-1.5 py-0.5 shadow-sm shrink-0">
+              <Image src="/logo.png" alt="Toastmasters International" width={100} height={24} className="h-6 w-auto" priority />
             </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold text-white leading-tight">Admin Panel</p>
-              <p className="text-[9px] text-white/55 leading-none mt-0.5">Dehradun WIC India Toastmasters Club</p>
-            </div>
+            <p className="text-[10px] font-bold text-white leading-tight w-full truncate">Dehradun WIC India Toastmasters Club</p>
+            <p className="text-[8px] text-white/55 leading-none w-full truncate">No. 03295206 · Area 03 · Division I · District 41</p>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs font-semibold text-yellow-200 bg-white/10 px-2.5 py-1 rounded-full">Admin</span>
             <button onClick={logout} className="text-xs text-white/60 hover:text-white tap-target px-2 transition-colors">
               Sign out
@@ -482,6 +481,8 @@ function AdminPanel() {
           </div>
         )}
       </div>
+
+      <SiteFooter />
     </div>
   );
 }
