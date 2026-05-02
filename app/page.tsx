@@ -31,15 +31,13 @@ export default function Home() {
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-maroon-700 shadow-md">
         <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
-          {/* Left: logo + club info */}
-          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-            <div className="bg-white rounded-md px-2 py-0.5 shadow-sm shrink-0">
-              <Image src="/logo.png" alt="Toastmasters International" width={120} height={28} className="h-7 w-auto" priority />
+          {/* Left: logo stacked above club info — column layout gives full width to text */}
+          <div className="flex flex-col items-start justify-center gap-0.5 flex-1 min-w-0 overflow-hidden">
+            <div className="bg-white rounded-md px-1.5 py-0.5 shadow-sm shrink-0">
+              <Image src="/logo.png" alt="Toastmasters International" width={100} height={24} className="h-6 w-auto" priority />
             </div>
-            <div className="min-w-0 overflow-hidden">
-              <p className="text-[11px] font-bold text-white leading-tight truncate">Dehradun WIC India Toastmasters Club</p>
-              <p className="text-[9px] text-white/55 leading-none mt-0.5 truncate">No. 03295206 · Area 03 · Division I · District 41</p>
-            </div>
+            <p className="text-[10px] font-bold text-white leading-tight w-full truncate">Dehradun WIC India Toastmasters Club</p>
+            <p className="text-[8px] text-white/55 leading-none w-full truncate">No. 03295206 · Area 03 · Division I · District 41</p>
           </div>
 
           {/* Right: member + nav — shrink-0 so it never collapses */}

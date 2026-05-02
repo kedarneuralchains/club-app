@@ -70,8 +70,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               )}
             </div>
             <p className="text-sm text-stone-500 mt-0.5">
-              {formatMeetingDate(meeting.date)}&nbsp;·&nbsp;
-              {formatTime(meeting.start_time)}–{formatTime(meeting.end_time)} IST
+              {formatMeetingDate(meeting.date)}&nbsp;·&nbsp;<span className="whitespace-nowrap">{formatTime(meeting.start_time)}–{formatTime(meeting.end_time)} IST</span>
             </p>
             {meeting.theme && (
               <p className="text-sm font-medium text-stone-700 mt-0.5">🌐 {meeting.theme}</p>
