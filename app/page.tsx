@@ -30,32 +30,31 @@ export default function Home() {
     <div className="min-h-screen bg-navy-600">
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-maroon-700 shadow-md">
-        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
+          {/* Left: logo + club info */}
+          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
             <div className="bg-white rounded-md px-2 py-0.5 shadow-sm shrink-0">
               <Image src="/logo.png" alt="Toastmasters International" width={120} height={28} className="h-7 w-auto" priority />
             </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold text-white leading-tight">Dehradun WIC India Toastmasters Club</p>
-              <p className="text-[9px] text-white/55 leading-none mt-0.5">Club No. 03295206 | Area 03 | Division I | District 41</p>
+            <div className="min-w-0 overflow-hidden">
+              <p className="text-[11px] font-bold text-white leading-tight truncate">Dehradun WIC India Toastmasters Club</p>
+              <p className="text-[9px] text-white/55 leading-none mt-0.5 truncate">No. 03295206 · Area 03 · Division I · District 41</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Right: member + nav — shrink-0 so it never collapses */}
+          <div className="flex items-center gap-1.5 shrink-0">
             {currentMember && (
-              <div className="text-right">
-                <p className="text-xs text-white/50 leading-none">Signed in as</p>
-                <p className="text-sm font-semibold text-yellow-200 leading-tight truncate max-w-[120px]">
-                  {currentMember.display_name}
-                </p>
-              </div>
+              <span className="text-xs font-semibold text-yellow-200 truncate max-w-[72px]">
+                {currentMember.display_name}
+              </span>
             )}
             {loaded && (
               <button
                 onClick={clearIdentity}
                 className="text-xs text-white/60 hover:text-white tap-target px-2 py-1 transition-colors"
               >
-                {memberId ? 'Switch' : 'Pick name'}
+                {memberId ? 'Switch' : 'Sign in'}
               </button>
             )}
             <Link
