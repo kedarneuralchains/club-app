@@ -536,7 +536,14 @@ function VotingControls({ meeting, ballot, allMembers, onChanged }: {
     if (!ballot || ballot.status !== 'open') { setLiveCount(null); return; }
     async function fetchCount() {
       const { data } = await supabase.rpc('get_vote_count', { p_ballot_id: ballot!.id });
-      if (data !== null) setLiveCount(Number(data));
+      if (data !== null) {
+        const count = Number(data);
+        setLiveCount(count);
+        if (ballot!.voter_count && count >= ballot!.voter_count) {
+          await supabase.from('ballots').update({ status: 'closed', closed_at: new Date().toISOString() }).eq('id', ballot!.id);
+          onChanged();
+        }
+      }
     }
     fetchCount();
     const t = setInterval(fetchCount, 5000);
