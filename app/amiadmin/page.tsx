@@ -401,13 +401,14 @@ function AdminPanel() {
                 .filter(m => !isMeetingPast(m))
                 .sort((a, b) => a.number - b.number)[0]?.id ?? null;
 
-              return meetings.map((m) => {
+              return meetings.map((m, i) => {
                 const ballot = ballotsMap.get(m.id) ?? null;
                 const ballotActive = (ballot?.status ?? 'not_started') !== 'not_started';
                 const showVoting = m.id === nextMeetingId || ballotActive;
 
                 return (
                   <div key={m.id}>
+                    {i > 0 && <hr className="border-white/10 mb-4" />}
                     {editingMeeting?.id === m.id ? (
                       <MeetingForm
                         initial={{
@@ -633,7 +634,7 @@ function VotingControls({ meeting, ballot, allMembers, onChanged }: {
     setBusy(true);
     await supabase.from('votes').delete().eq('ballot_id', ballot.id);
     await supabase.from('ballots').update({ status: 'open', closed_at: null, voter_count: null }).eq('id', ballot.id);
-    setBusy(false); setShowResults(false); setLiveCount(null); onChanged();
+    setBusy(false); setShowResults(false); setLiveCount(null); setResults([]); onChanged();
   }
 
   async function resetBallot() {
@@ -646,8 +647,8 @@ function VotingControls({ meeting, ballot, allMembers, onChanged }: {
     }).eq('id', ballot.id);
     setBusy(false);
     setShowReset(false); setResetInput(''); setShowShare(false);
-    setQrDataUrl(''); setShowResults(false); setTtSpeakers([]);
-    setVoterCount(''); setShowOpen(false);
+    setQrDataUrl(''); setShowResults(false); setResults([]); setLiveCount(null);
+    setTtSpeakers([]); setVoterCount(''); setShowOpen(false);
     onChanged();
   }
 
