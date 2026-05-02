@@ -1,19 +1,24 @@
 'use client';
-import type { MeetingWithClaims, Member, RoleKey } from '@/lib/types';
+import { useState } from 'react';
+import type { Ballot, MeetingWithClaims, Member, RoleKey } from '@/lib/types';
 import { getMeetingRoles } from '@/lib/types';
 import { formatMeetingDate, formatTime, isMeetingLocked, isMeetingPast } from '@/lib/utils';
 import { RoleSlot } from './RoleSlot';
 import { WhatsAppCopyButton } from './WhatsAppCopyButton';
+import { BallotModal } from './BallotModal';
 
 interface Props {
   meeting: MeetingWithClaims;
   allMembers: Member[];
   memberId: string | null;
+  deviceId?: string | null;
+  ballot?: Ballot;
   isAdmin: boolean;
   onChanged: () => void;
 }
 
-export function MeetingCard({ meeting, allMembers, memberId, isAdmin, onChanged }: Props) {
+export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, isAdmin, onChanged }: Props) {
+  const [showBallot, setShowBallot] = useState(false);
   const locked = isMeetingLocked(meeting);
   const past = isMeetingPast(meeting);
 
@@ -37,6 +42,7 @@ export function MeetingCard({ meeting, allMembers, memberId, isAdmin, onChanged 
   );
 
   return (
+    <>
     <article className={`bg-white rounded-2xl shadow-sm border overflow-hidden
       ${past ? 'border-stone-100 opacity-75' : 'border-stone-200'}`}
     >
@@ -71,9 +77,25 @@ export function MeetingCard({ meeting, allMembers, memberId, isAdmin, onChanged 
               <p className="text-sm font-medium text-stone-700 mt-0.5">🌐 {meeting.theme}</p>
             )}
           </div>
-          {!past && (
-            <WhatsAppCopyButton meeting={meeting} members={allMembers} />
-          )}
+          <div className="flex items-center gap-2">
+            {ballot?.status === 'open' && memberId && deviceId && (
+              <button
+                onClick={() => setShowBallot(true)}
+                className="bg-yellow-400 hover:bg-yellow-300 text-navy-800 font-bold text-xs px-3 py-1.5
+                           rounded-full transition-colors shadow-sm shrink-0"
+              >
+                Vote Now
+              </button>
+            )}
+            {ballot?.status === 'closed' && (
+              <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-1 rounded-full shrink-0">
+                Voting closed
+              </span>
+            )}
+            {!past && (
+              <WhatsAppCopyButton meeting={meeting} members={allMembers} />
+            )}
+          </div>
         </div>
 
         {!past && !locked && (
@@ -158,6 +180,18 @@ export function MeetingCard({ meeting, allMembers, memberId, isAdmin, onChanged 
         </RoleSection>
       </div>
     </article>
+
+    {showBallot && ballot && memberId && deviceId && (
+      <BallotModal
+        ballot={ballot}
+        meeting={meeting}
+        allMembers={allMembers}
+        memberId={memberId}
+        deviceId={deviceId}
+        onClose={() => setShowBallot(false)}
+      />
+    )}
+    </>
   );
 }
 

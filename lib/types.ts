@@ -1,3 +1,22 @@
+export type BallotStatus = 'not_started' | 'open' | 'closed';
+
+export interface Ballot {
+  id: string;
+  meeting_id: string;
+  status: BallotStatus;
+  meeting_code: string | null;
+  opened_at: string | null;
+  closed_at: string | null;
+  created_at: string;
+}
+
+export interface VoteResult {
+  category: string;
+  voted_for_member_id: string;
+  voted_for_display_name: string;
+  vote_count: number;
+}
+
 export type RoleKey =
   | 'speaker'
   | 'evaluator'

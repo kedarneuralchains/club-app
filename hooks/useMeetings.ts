@@ -1,27 +1,30 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import type { MeetingWithClaims, Member } from '@/lib/types';
+import type { MeetingWithClaims, Member, Ballot } from '@/lib/types';
 
 export function useMeetings() {
   const [meetings, setMeetings] = useState<MeetingWithClaims[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [ballots, setBallots] = useState<Map<string, Ballot>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
 
   const fetchAll = useCallback(async () => {
-    const [{ data: meetingsData }, { data: membersData }] = await Promise.all([
+    const [{ data: meetingsData }, { data: membersData }, { data: ballotsData }] = await Promise.all([
       supabase
         .from('meetings')
         .select('*, role_claims(*, member:members(*))')
         .order('number', { ascending: false })
         .limit(6),
       supabase.from('members').select('*').eq('active', true).order('name'),
+      supabase.from('ballots').select('*'),
     ]);
 
     if (meetingsData) setMeetings(meetingsData as MeetingWithClaims[]);
     if (membersData) setMembers(membersData as Member[]);
+    setBallots(new Map((ballotsData ?? []).map((b: Ballot) => [b.meeting_id, b])));
     setLoading(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -29,17 +32,12 @@ export function useMeetings() {
     fetchAll();
   }, [fetchAll]);
 
-  // Realtime: re-fetch the relevant meeting when any claim changes
+  // Realtime: re-fetch when claims or ballot status changes
   useEffect(() => {
     const channel = supabase
-      .channel('role_claims_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'role_claims' },
-        () => {
-          fetchAll();
-        }
-      )
+      .channel('tm_public_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'role_claims' }, () => fetchAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ballots' }, () => fetchAll())
       .subscribe();
 
     return () => {
@@ -47,5 +45,5 @@ export function useMeetings() {
     };
   }, [fetchAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { meetings, members, loading, refetch: fetchAll };
+  return { meetings, members, ballots, loading, refetch: fetchAll };
 }

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { MeetingCard } from '@/components/MeetingCard';
-import type { Member, MeetingWithClaims, MeetingType } from '@/lib/types';
+import type { Member, MeetingWithClaims, MeetingType, Ballot, VoteResult } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -277,6 +277,7 @@ function AdminPanel() {
   const supabase = createClient();
   const [meetings, setMeetings] = useState<MeetingWithClaims[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [ballotsMap, setBallotsMap] = useState<Map<string, Ballot>>(new Map());
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'meetings' | 'members'>('meetings');
   const [showNewMeeting, setShowNewMeeting] = useState(false);
@@ -284,16 +285,18 @@ function AdminPanel() {
   const [memberFilter, setMemberFilter] = useState<'active' | 'all'>('active');
 
   const fetchAll = useCallback(async () => {
-    const [{ data: m }, { data: mb }] = await Promise.all([
+    const [{ data: m }, { data: mb }, { data: bl }] = await Promise.all([
       supabase
         .from('meetings')
         .select('*, role_claims(*, member:members(*))')
         .order('number', { ascending: false })
         .limit(10),
       supabase.from('members').select('*').order('name'),
+      supabase.from('ballots').select('*'),
     ]);
     if (m) setMeetings(m as MeetingWithClaims[]);
     if (mb) setMembers(mb as Member[]);
+    if (bl) setBallotsMap(new Map((bl as Ballot[]).map((b) => [b.meeting_id, b])));
     setLoading(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -423,6 +426,11 @@ function AdminPanel() {
                         Delete
                       </button>
                     </div>
+                    <VotingControls
+                      meeting={m}
+                      ballot={ballotsMap.get(m.id) ?? null}
+                      onChanged={fetchAll}
+                    />
                   </div>
                 )}
               </div>
@@ -463,6 +471,217 @@ function AdminPanel() {
     </div>
   );
 }
+
+// ─── Voting Controls ──────────────────────────────────────────────────────────
+
+function VotingControls({ meeting, ballot, onChanged }: {
+  meeting: MeetingWithClaims;
+  ballot: Ballot | null;
+  onChanged: () => void;
+}) {
+  const supabase = createClient();
+  const [busy, setBusy] = useState(false);
+  const [showOpen, setShowOpen] = useState(false);
+  const [codeInput, setCodeInput] = useState('');
+  const [liveCount, setLiveCount] = useState<number | null>(null);
+  const [results, setResults] = useState<VoteResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetInput, setResetInput] = useState('');
+
+  useEffect(() => {
+    if (!ballot || ballot.status !== 'open') { setLiveCount(null); return; }
+    async function fetchCount() {
+      const { data } = await supabase.rpc('get_vote_count', { p_ballot_id: ballot!.id });
+      if (data !== null) setLiveCount(Number(data));
+    }
+    fetchCount();
+    const t = setInterval(fetchCount, 5000);
+    return () => clearInterval(t);
+  }, [ballot?.id, ballot?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!ballot || ballot.status === 'not_started') return;
+    if (!showResults) return;
+    async function fetchResults() {
+      const { data } = await supabase.rpc('get_ballot_results', { p_ballot_id: ballot!.id });
+      if (data) setResults(data as VoteResult[]);
+    }
+    fetchResults();
+  }, [ballot?.id, showResults]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function generateCode() { return String(Math.floor(1000 + Math.random() * 9000)); }
+
+  async function openVoting() {
+    if (codeInput.length !== 4) return;
+    setBusy(true);
+    const payload = { status: 'open', meeting_code: codeInput, opened_at: new Date().toISOString(), closed_at: null };
+    if (ballot) {
+      await supabase.from('ballots').update(payload).eq('id', ballot.id);
+    } else {
+      await supabase.from('ballots').insert({ meeting_id: meeting.id, ...payload });
+    }
+    setBusy(false); setShowOpen(false); onChanged();
+  }
+
+  async function closeVoting() {
+    if (!ballot) return;
+    setBusy(true);
+    await supabase.from('ballots').update({ status: 'closed', closed_at: new Date().toISOString() }).eq('id', ballot.id);
+    setBusy(false); onChanged();
+  }
+
+  async function reopenVoting() {
+    if (!ballot) return;
+    setBusy(true);
+    await supabase.from('ballots').update({ status: 'open', closed_at: null }).eq('id', ballot.id);
+    setBusy(false); onChanged();
+  }
+
+  async function resetBallot() {
+    if (!ballot || resetInput !== String(meeting.number)) return;
+    setBusy(true);
+    await supabase.from('votes').delete().eq('ballot_id', ballot.id);
+    await supabase.from('ballots').update({
+      status: 'not_started', meeting_code: null, opened_at: null, closed_at: null,
+    }).eq('id', ballot.id);
+    setBusy(false); setShowReset(false); setResetInput(''); onChanged();
+  }
+
+  const status = ballot?.status ?? 'not_started';
+  const CAT_LABELS: Record<string, string> = {
+    speaker: '🎙️ Best Speaker',
+    evaluator: '⚖️ Best Evaluator',
+    table_topics: '💬 Best Table Topics',
+  };
+
+  return (
+    <div className="mt-3 px-1 border-t border-white/10 pt-3">
+      {/* Status row */}
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <span className="text-[10px] font-semibold text-white/30 uppercase tracking-widest">Voting</span>
+        {status === 'not_started' && <span className="text-xs text-white/30">Not started</span>}
+        {status === 'open' && (
+          <span className="text-xs font-semibold text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
+            Open · Code: <span className="font-mono tracking-widest">{ballot?.meeting_code}</span>
+          </span>
+        )}
+        {status === 'closed' && (
+          <span className="text-xs font-semibold text-yellow-300 bg-yellow-300/10 px-2 py-0.5 rounded-full">Closed</span>
+        )}
+        {status === 'open' && liveCount !== null && (
+          <span className="text-xs text-white/40">{liveCount} vote{liveCount !== 1 ? 's' : ''} submitted</span>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-2">
+        {status === 'not_started' && !showOpen && (
+          <button onClick={() => { setShowOpen(true); setCodeInput(generateCode()); }}
+            className="text-xs font-semibold bg-maroon-700 text-white px-3 py-1.5 rounded-lg tap-target hover:bg-maroon-600 transition-colors">
+            🗳️ Open voting
+          </button>
+        )}
+        {status === 'open' && (
+          <>
+            <button onClick={closeVoting} disabled={busy}
+              className="text-xs font-semibold bg-yellow-400 text-stone-900 px-3 py-1.5 rounded-lg tap-target disabled:opacity-50 active:scale-95 transition-transform">
+              Close voting
+            </button>
+            <button onClick={() => setShowResults(!showResults)}
+              className="text-xs text-white/50 hover:text-white px-3 py-1.5 tap-target">
+              {showResults ? 'Hide tallies' : 'Preview tallies'}
+            </button>
+          </>
+        )}
+        {status === 'closed' && (
+          <>
+            <button onClick={reopenVoting} disabled={busy}
+              className="text-xs text-white/50 hover:text-yellow-200 px-3 py-1.5 tap-target">
+              Re-open
+            </button>
+            <button onClick={() => setShowResults(!showResults)}
+              className="text-xs text-white/50 hover:text-white px-3 py-1.5 tap-target">
+              {showResults ? 'Hide results' : 'View results'}
+            </button>
+          </>
+        )}
+        {ballot && (
+          <button onClick={() => setShowReset(!showReset)}
+            className="text-xs text-red-400/50 hover:text-red-400 px-3 py-1.5 tap-target ml-auto">
+            Reset ballot
+          </button>
+        )}
+      </div>
+
+      {/* Code input panel */}
+      {showOpen && (
+        <div className="mt-2 flex items-end gap-3 bg-white/5 rounded-xl p-3">
+          <div>
+            <label className="text-xs text-white/40 block mb-1">4-digit code for members</label>
+            <input type="text" inputMode="numeric" maxLength={4} value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="w-24 bg-white rounded-lg px-3 py-2 text-xl font-mono font-bold text-navy-700 text-center focus:outline-none focus:ring-2 focus:ring-maroon-500" />
+          </div>
+          <button onClick={openVoting} disabled={busy || codeInput.length !== 4}
+            className="text-sm font-semibold bg-green-500 text-white px-4 py-2.5 rounded-xl tap-target disabled:opacity-40 active:scale-95 transition-transform">
+            {busy ? '…' : 'Confirm open'}
+          </button>
+          <button onClick={() => setShowOpen(false)} className="text-xs text-white/40 hover:text-white tap-target px-2 py-2">Cancel</button>
+        </div>
+      )}
+
+      {/* Tallies / results preview */}
+      {showResults && (
+        <div className="mt-2 bg-white/5 rounded-xl p-3 space-y-3">
+          {results.length === 0 && <p className="text-xs text-white/30 text-center py-2">No votes yet.</p>}
+          {(['speaker', 'evaluator', 'table_topics'] as const).map((cat) => {
+            if (meeting.meeting_type === 'speakathon' && cat === 'table_topics') return null;
+            const catRows = results.filter((r) => r.category === cat);
+            if (!catRows.length) return null;
+            return (
+              <div key={cat}>
+                <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-1">{CAT_LABELS[cat]}</p>
+                {catRows.map((r, i) => (
+                  <div key={r.voted_for_member_id} className="flex items-center gap-2 py-0.5">
+                    {i === 0 && <span className="text-yellow-300 text-xs">★</span>}
+                    {i > 0 && <span className="text-white/0 text-xs">★</span>}
+                    <span className={`text-sm ${i === 0 ? 'text-yellow-200 font-semibold' : 'text-white/50'}`}>
+                      TM {r.voted_for_display_name}
+                    </span>
+                    <span className="ml-auto text-xs text-white/30">{r.vote_count} vote{r.vote_count !== 1 ? 's' : ''}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Reset confirmation */}
+      {showReset && (
+        <div className="mt-2 bg-red-900/20 border border-red-500/20 rounded-xl p-3">
+          <p className="text-xs text-red-300 mb-2">
+            Type <strong className="font-mono">{meeting.number}</strong> to wipe all votes for this ballot.
+          </p>
+          <div className="flex gap-2">
+            <input type="text" value={resetInput} onChange={(e) => setResetInput(e.target.value)}
+              placeholder={String(meeting.number)}
+              className="flex-1 bg-white/10 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-red-500" />
+            <button onClick={resetBallot} disabled={busy || resetInput !== String(meeting.number)}
+              className="text-xs font-semibold bg-red-600 text-white px-3 py-1.5 rounded-lg tap-target disabled:opacity-40">
+              {busy ? '…' : 'Reset'}
+            </button>
+            <button onClick={() => { setShowReset(false); setResetInput(''); }}
+              className="text-xs text-white/40 hover:text-white tap-target px-2">Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Add Member Form ──────────────────────────────────────────────────────────
 
 function AddMemberForm({ onAdd }: { onAdd: (name: string) => void }) {
   const [name, setName] = useState('');

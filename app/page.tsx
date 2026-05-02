@@ -8,8 +8,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function Home() {
-  const { meetings, members, loading, refetch } = useMeetings();
-  const { memberId, loaded, identify, clearIdentity } = useIdentity();
+  const { meetings, members, ballots, loading, refetch } = useMeetings();
+  const { memberId, deviceId, loaded, identify, clearIdentity } = useIdentity();
 
   const currentMember = members.find((m) => m.id === memberId);
 
@@ -89,6 +89,8 @@ export default function Home() {
                       meeting={m}
                       allMembers={members}
                       memberId={memberId}
+                      deviceId={deviceId}
+                      ballot={ballots.get(m.id)}
                       isAdmin={false}
                       onChanged={refetch}
                     />
@@ -110,6 +112,8 @@ export default function Home() {
                       meeting={m}
                       allMembers={members}
                       memberId={memberId}
+                      deviceId={deviceId}
+                      ballot={ballots.get(m.id)}
                       isAdmin={false}
                       onChanged={refetch}
                     />
