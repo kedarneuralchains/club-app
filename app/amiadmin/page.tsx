@@ -647,6 +647,7 @@ function VotingControls({ meeting, ballot, allMembers, onChanged }: {
     setBusy(false);
     setShowReset(false); setResetInput(''); setShowShare(false);
     setQrDataUrl(''); setShowResults(false); setTtSpeakers([]);
+    setVoterCount(''); setShowOpen(false);
     onChanged();
   }
 
@@ -716,7 +717,7 @@ function VotingControls({ meeting, ballot, allMembers, onChanged }: {
               <select
                 value={addMemberId}
                 onChange={e => setAddMemberId(e.target.value)}
-                className="flex-1 bg-white/10 text-white text-xs rounded-lg px-2 py-2 border border-white/10 focus:outline-none focus:ring-1 focus:ring-maroon-400 min-w-0"
+                className="flex-1 bg-white text-stone-800 text-xs rounded-lg px-2 py-2 border border-white/20 focus:outline-none focus:ring-1 focus:ring-maroon-400 min-w-0"
               >
                 <option value="">Add a member…</option>
                 {availableMembers.map(m => (
@@ -737,7 +738,7 @@ function VotingControls({ meeting, ballot, allMembers, onChanged }: {
                 onChange={e => setGuestNameInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addTTGuest()}
                 placeholder="Guest name…"
-                className="flex-1 bg-white/10 text-white text-xs rounded-lg px-2 py-2 border border-white/10 focus:outline-none focus:ring-1 focus:ring-maroon-400 placeholder:text-white/25 min-w-0"
+                className="flex-1 bg-white text-stone-800 text-xs rounded-lg px-2 py-2 border border-white/20 focus:outline-none focus:ring-1 focus:ring-maroon-400 placeholder:text-stone-400 min-w-0"
               />
               <button onClick={addTTGuest} disabled={!guestNameInput.trim() || savingTT}
                 className="text-xs font-semibold bg-white/10 text-white/70 px-3 py-2 rounded-lg tap-target disabled:opacity-40 hover:bg-white/20 shrink-0">

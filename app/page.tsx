@@ -12,7 +12,7 @@ import Image from 'next/image';
 type Tab = 'next' | 'upcoming' | 'past';
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'next',     label: 'Upcoming Meeting' },
+  { id: 'next',     label: 'Upcoming Meeting' }, // label overridden dynamically below
   { id: 'upcoming', label: 'Future Meetings' },
   { id: 'past',     label: 'Past' },
 ];
@@ -35,6 +35,8 @@ export default function Home() {
 
   const nextMeeting = future[0] ?? null;
   const upcomingMeetings = future.slice(1);
+  const nextBallotStatus = nextMeeting ? (ballots.get(nextMeeting.id)?.status ?? null) : null;
+  const nextTabLabel = nextBallotStatus === 'open' ? 'Current Meeting' : 'Upcoming Meeting';
 
   const tabContent: Record<Tab, typeof meetings> = {
     next:     nextMeeting ? [nextMeeting] : [],
@@ -102,7 +104,7 @@ export default function Home() {
                     : 'text-white/60 hover:text-white'
                 }`}
               >
-                {label}
+                {id === 'next' ? nextTabLabel : label}
               </button>
             ))}
           </div>

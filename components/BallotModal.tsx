@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import type { Ballot, MeetingWithClaims, Member } from '@/lib/types';
+import type { Ballot, MeetingWithClaims, Member, VoteResult } from '@/lib/types';
 import { ROLE_META } from '@/lib/types';
 import type { RoleKey } from '@/lib/types';
 
@@ -9,16 +9,16 @@ interface Props {
   ballot: Ballot;
   meeting: MeetingWithClaims;
   allMembers: Member[];
-  memberId: string;
-  deviceId: string;
+  memberId: string | null;
+  deviceId: string | null;
   onClose: () => void;
 }
 
 interface Candidate {
-  id: string;       // member UUID or "guest-{id}" for TT guests
-  label: string;    // what to display on the button
-  memberId: string | null;   // null for guests
-  guestName: string | null;  // set for guests
+  id: string;
+  label: string;
+  memberId: string | null;
+  guestName: string | null;
 }
 
 type VoteCategory = 'speaker' | 'evaluator' | 'table_topics' | 'role_player' | 'aux_role';
@@ -36,11 +36,26 @@ const AUX_ROLE_KEYS:    RoleKey[] = ['timer', 'grammarian', 'ah_counter', 'harkm
 
 export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, onClose }: Props) {
   const supabase = createClient();
+  const isClosed = ballot.status === 'closed';
 
+  // ── Results mode (when voting is closed) ─────────────────────────────────
+  const [results, setResults] = useState<VoteResult[]>([]);
+  const [loadingResults, setLoadingResults] = useState(isClosed);
+
+  useEffect(() => {
+    if (!isClosed) return;
+    supabase.rpc('get_ballot_results', { p_ballot_id: ballot.id }).then(({ data }) => {
+      if (data) setResults(data as VoteResult[]);
+      setLoadingResults(false);
+    });
+  }, [ballot.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Voting mode ───────────────────────────────────────────────────────────
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [alreadyVoted, setAlreadyVoted] = useState(false);
+  const [isFull, setIsFull] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [voteCount, setVoteCount] = useState<number | null>(null);
 
@@ -48,6 +63,20 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
     const { data } = await supabase.rpc('get_vote_count', { p_ballot_id: ballot.id });
     setVoteCount(data ?? 0);
   }, [ballot.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check voter count cap on mount (open ballots only)
+  useEffect(() => {
+    if (isClosed || !ballot.voter_count) return;
+    fetchVoteCount().then(() => {
+      // isFull is set reactively below when voteCount updates
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (ballot.voter_count !== null && voteCount !== null && voteCount >= ballot.voter_count) {
+      setIsFull(true);
+    }
+  }, [voteCount, ballot.voter_count]);
 
   useEffect(() => {
     if (!submitted && !alreadyVoted) return;
@@ -107,9 +136,20 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
   const allSelected = categories.every(c => !!selections[c.key]);
 
   async function handleSubmit() {
-    if (!allSelected || submitting) return;
+    if (!allSelected || submitting || !memberId || !deviceId) return;
     setSubmitting(true);
     setSubmitError('');
+
+    // Re-check voter count cap before submitting
+    if (ballot.voter_count !== null) {
+      const { data: currentCount } = await supabase.rpc('get_vote_count', { p_ballot_id: ballot.id });
+      if (currentCount !== null && Number(currentCount) >= ballot.voter_count) {
+        setIsFull(true);
+        setSubmitError(`Voting is full — all ${ballot.voter_count} slots are taken.`);
+        setSubmitting(false);
+        return;
+      }
+    }
 
     const rows = categories.map(c => {
       const candidate = c.candidates.find(cand => cand.id === selections[c.key])!;
@@ -142,6 +182,14 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
       : `${count} ${count === 1 ? 'vote' : 'votes'} submitted`;
   }
 
+  const CAT_LABELS: Record<string, string> = {
+    speaker:      '🎙️ Best Speaker',
+    evaluator:    '⚖️ Best Evaluator',
+    table_topics: '💬 Best Table Topics Speaker',
+    role_player:  '🎤 Best Role Player',
+    aux_role:     '⏱️ Best Auxiliary Role Player',
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
@@ -149,83 +197,140 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
     >
       <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-maroon-700 px-5 py-4 flex items-center justify-between shrink-0">
+        <div className={`px-5 py-4 flex items-center justify-between shrink-0 ${isClosed ? 'bg-navy-700' : 'bg-maroon-700'}`}>
           <div>
-            <h2 className="font-bold text-white text-lg">Meeting #{meeting.number} — Ballot</h2>
-            <p className="text-xs text-white/60 mt-0.5">Select one in each category, then submit</p>
+            <h2 className="font-bold text-white text-lg">
+              Meeting #{meeting.number} — {isClosed ? 'Results' : 'Ballot'}
+            </h2>
+            <p className="text-xs text-white/60 mt-0.5">
+              {isClosed ? 'Final results' : 'Select one in each category, then submit'}
+            </p>
           </div>
           <button onClick={onClose} className="text-white/60 hover:text-white text-xl tap-target px-2">✕</button>
         </div>
 
-        <div className="p-5 overflow-y-auto space-y-6">
+        <div className="p-5 overflow-y-auto space-y-5">
 
-          {/* ── Already voted (from DB constraint) ── */}
-          {alreadyVoted && (
-            <div className="text-center py-6 space-y-2">
-              <div className="text-4xl">✓</div>
-              <p className="font-semibold text-stone-800">Your vote is already recorded</p>
-              <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
-              {voteCount !== null && (
-                <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
-              )}
-            </div>
-          )}
-
-          {/* ── Submitted ── */}
-          {submitted && !alreadyVoted && (
-            <div className="text-center py-6 space-y-2">
-              <div className="text-4xl">✓</div>
-              <p className="font-semibold text-stone-800">Vote submitted!</p>
-              <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
-              {voteCount !== null && (
-                <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
-              )}
-            </div>
-          )}
-
-          {/* ── Ballot form ── */}
-          {!submitted && !alreadyVoted && (
+          {/* ── Results view (closed ballot) ── */}
+          {isClosed && (
             <>
-              {categories.map(cat => {
-                const meta = CAT_META[cat.key];
+              {loadingResults && (
+                <div className="py-10 text-center text-stone-400 text-sm">Loading results…</div>
+              )}
+              {!loadingResults && results.length === 0 && (
+                <div className="py-10 text-center text-stone-400 text-sm">No votes were cast.</div>
+              )}
+              {!loadingResults && Object.entries(CAT_LABELS).map(([cat, label]) => {
+                const catRows = results.filter(r => r.category === cat);
+                if (!catRows.length) return null;
                 return (
-                  <div key={cat.key}>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">
-                      {meta.emoji} {meta.label}
-                    </p>
+                  <div key={cat}>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">{label}</p>
                     <div className="space-y-1.5">
-                      {cat.candidates.map(c => (
-                        <button
-                          key={c.id}
-                          onClick={() => setSelections(s => ({ ...s, [cat.key]: c.id }))}
-                          className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all border
-                            ${selections[cat.key] === c.id
-                              ? 'bg-maroon-700 text-white border-maroon-700'
-                              : 'bg-stone-50 text-stone-700 border-stone-100 hover:border-maroon-300 hover:bg-maroon-50'
-                            }`}
-                        >
-                          {c.label}
-                        </button>
+                      {catRows.map((r, i) => (
+                        <div key={`${r.voted_for_member_id ?? r.voted_for_display_name}-${i}`}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                            i === 0
+                              ? 'bg-yellow-50 border-yellow-200'
+                              : 'bg-stone-50 border-stone-100'
+                          }`}>
+                          <span className="text-base shrink-0">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+                          <span className={`text-sm flex-1 font-medium ${i === 0 ? 'text-yellow-800' : 'text-stone-600'}`}>
+                            {r.voted_for_display_name}
+                          </span>
+                          <span className="text-xs text-stone-400 shrink-0">
+                            {r.vote_count} vote{r.vote_count !== 1 ? 's' : ''}
+                          </span>
+                        </div>
                       ))}
                     </div>
                   </div>
                 );
               })}
+            </>
+          )}
 
-              {submitError && <p className="text-sm text-red-500">{submitError}</p>}
+          {/* ── Voting mode ── */}
+          {!isClosed && (
+            <>
+              {/* Slots full */}
+              {isFull && !submitted && !alreadyVoted && (
+                <div className="text-center py-8 space-y-2">
+                  <div className="text-4xl">🚫</div>
+                  <p className="font-semibold text-stone-800">Voting slots are full</p>
+                  <p className="text-sm text-stone-400">All {ballot.voter_count} voting slots have been taken.</p>
+                </div>
+              )}
 
-              <button
-                onClick={handleSubmit}
-                disabled={!allSelected || submitting}
-                className="w-full bg-maroon-700 text-white py-3.5 rounded-xl font-semibold text-base
-                           disabled:opacity-40 disabled:cursor-not-allowed hover:bg-maroon-800 transition-colors"
-              >
-                {submitting ? 'Submitting…' : 'Submit Ballot'}
-              </button>
-              {!allSelected && (
-                <p className="text-xs text-stone-400 text-center -mt-4">
-                  Select one per category to enable submit
-                </p>
+              {/* Already voted */}
+              {alreadyVoted && (
+                <div className="text-center py-6 space-y-2">
+                  <div className="text-4xl">✓</div>
+                  <p className="font-semibold text-stone-800">Your vote is already recorded</p>
+                  <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
+                  {voteCount !== null && (
+                    <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Submitted */}
+              {submitted && !alreadyVoted && (
+                <div className="text-center py-6 space-y-2">
+                  <div className="text-4xl">✓</div>
+                  <p className="font-semibold text-stone-800">Vote submitted!</p>
+                  <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
+                  {voteCount !== null && (
+                    <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Ballot form */}
+              {!isFull && !submitted && !alreadyVoted && (
+                <>
+                  {categories.map(cat => {
+                    const meta = CAT_META[cat.key];
+                    return (
+                      <div key={cat.key}>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">
+                          {meta.emoji} {meta.label}
+                        </p>
+                        <div className="space-y-1.5">
+                          {cat.candidates.map(c => (
+                            <button
+                              key={c.id}
+                              onClick={() => setSelections(s => ({ ...s, [cat.key]: c.id }))}
+                              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all border
+                                ${selections[cat.key] === c.id
+                                  ? 'bg-maroon-700 text-white border-maroon-700'
+                                  : 'bg-stone-50 text-stone-700 border-stone-100 hover:border-maroon-300 hover:bg-maroon-50'
+                                }`}
+                            >
+                              {c.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {submitError && <p className="text-sm text-red-500">{submitError}</p>}
+
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!allSelected || submitting}
+                    className="w-full bg-maroon-700 text-white py-3.5 rounded-xl font-semibold text-base
+                               disabled:opacity-40 disabled:cursor-not-allowed hover:bg-maroon-800 transition-colors"
+                  >
+                    {submitting ? 'Submitting…' : 'Submit Ballot'}
+                  </button>
+                  {!allSelected && (
+                    <p className="text-xs text-stone-400 text-center -mt-4">
+                      Select one per category to enable submit
+                    </p>
+                  )}
+                </>
               )}
             </>
           )}

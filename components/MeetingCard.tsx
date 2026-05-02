@@ -88,9 +88,13 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               </button>
             )}
             {ballot?.status === 'closed' && (
-              <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-1 rounded-full shrink-0">
-                Voting closed
-              </span>
+              <button
+                onClick={() => setShowBallot(true)}
+                className="bg-navy-700 hover:bg-navy-600 text-yellow-200 font-bold text-xs px-3 py-1.5
+                           rounded-full transition-colors shadow-sm shrink-0"
+              >
+                🏆 View Results
+              </button>
             )}
             {!past && !hideWhatsApp && (
               <WhatsAppCopyButton meeting={meeting} members={allMembers} />
@@ -185,13 +189,13 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
       </div>
     </article>
 
-    {showBallot && ballot && memberId && deviceId && (
+    {showBallot && ballot && (ballot.status === 'closed' || (memberId && deviceId)) && (
       <BallotModal
         ballot={ballot}
         meeting={meeting}
         allMembers={allMembers}
-        memberId={memberId}
-        deviceId={deviceId}
+        memberId={memberId ?? null}
+        deviceId={deviceId ?? null}
         onClose={() => setShowBallot(false)}
       />
     )}
