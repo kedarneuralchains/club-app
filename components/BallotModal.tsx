@@ -64,12 +64,14 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
     setVoteCount(data ?? 0);
   }, [ballot.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check voter count cap on mount (open ballots only)
+  // Check on mount: already voted? voter count cap?
   useEffect(() => {
-    if (isClosed || !ballot.voter_count) return;
-    fetchVoteCount().then(() => {
-      // isFull is set reactively below when voteCount updates
-    });
+    if (isClosed) return;
+    if (deviceId) {
+      supabase.rpc('has_voted', { p_ballot_id: ballot.id, p_device_uuid: deviceId })
+        .then(({ data }) => { if (data) setAlreadyVoted(true); });
+    }
+    if (ballot.voter_count) fetchVoteCount();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
