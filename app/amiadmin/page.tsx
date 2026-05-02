@@ -497,12 +497,15 @@ function VotingControls({ meeting, ballot, onChanged }: {
   const supabase = createClient();
   const [busy, setBusy] = useState(false);
   const [showOpen, setShowOpen] = useState(false);
-  const [codeInput, setCodeInput] = useState('');
+  const [voterCount, setVoterCount] = useState('');
   const [liveCount, setLiveCount] = useState<number | null>(null);
   const [results, setResults] = useState<VoteResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [resetInput, setResetInput] = useState('');
+  const [showShare, setShowShare] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!ballot || ballot.status !== 'open') { setLiveCount(null); return; }
@@ -525,18 +528,46 @@ function VotingControls({ meeting, ballot, onChanged }: {
     fetchResults();
   }, [ballot?.id, showResults]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function generateCode() { return String(Math.floor(1000 + Math.random() * 9000)); }
+  // Generate QR when share panel opens
+  useEffect(() => {
+    if (!showShare || qrDataUrl) return;
+    const url = window.location.origin;
+    import('qrcode').then((QRCode) => {
+      QRCode.toDataURL(url, { width: 240, margin: 2, color: { dark: '#004165', light: '#ffffff' } })
+        .then(setQrDataUrl);
+    });
+  }, [showShare, qrDataUrl]);
 
   async function openVoting() {
-    if (codeInput.length !== 4) return;
     setBusy(true);
-    const payload = { status: 'open', meeting_code: codeInput, opened_at: new Date().toISOString(), closed_at: null };
+    const payload = {
+      status: 'open' as const,
+      meeting_code: null,
+      voter_count: voterCount ? parseInt(voterCount) : null,
+      opened_at: new Date().toISOString(),
+      closed_at: null,
+    };
     if (ballot) {
       await supabase.from('ballots').update(payload).eq('id', ballot.id);
     } else {
       await supabase.from('ballots').insert({ meeting_id: meeting.id, ...payload });
     }
     setBusy(false); setShowOpen(false); onChanged();
+  }
+
+  async function handleShare() {
+    const url = window.location.origin;
+    if (navigator.share) {
+      await navigator.share({
+        title: `Meeting #${meeting.number} — Vote Now`,
+        text: 'Cast your vote for Dehradun WIC Toastmasters.',
+        url,
+      }).catch(() => {/* user dismissed */});
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   }
 
   async function closeVoting() {
@@ -558,9 +589,9 @@ function VotingControls({ meeting, ballot, onChanged }: {
     setBusy(true);
     await supabase.from('votes').delete().eq('ballot_id', ballot.id);
     await supabase.from('ballots').update({
-      status: 'not_started', meeting_code: null, opened_at: null, closed_at: null,
+      status: 'not_started', meeting_code: null, voter_count: null, opened_at: null, closed_at: null,
     }).eq('id', ballot.id);
-    setBusy(false); setShowReset(false); setResetInput(''); onChanged();
+    setBusy(false); setShowReset(false); setResetInput(''); setShowShare(false); setQrDataUrl(''); onChanged();
   }
 
   const status = ballot?.status ?? 'not_started';
@@ -578,21 +609,23 @@ function VotingControls({ meeting, ballot, onChanged }: {
         {status === 'not_started' && <span className="text-xs text-white/30">Not started</span>}
         {status === 'open' && (
           <span className="text-xs font-semibold text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
-            Open · Code: <span className="font-mono tracking-widest">{ballot?.meeting_code}</span>
+            Open
           </span>
         )}
         {status === 'closed' && (
           <span className="text-xs font-semibold text-yellow-300 bg-yellow-300/10 px-2 py-0.5 rounded-full">Closed</span>
         )}
         {status === 'open' && liveCount !== null && (
-          <span className="text-xs text-white/40">{liveCount} vote{liveCount !== 1 ? 's' : ''} submitted</span>
+          <span className="text-xs text-white/40">
+            {liveCount}{ballot?.voter_count ? ` / ${ballot.voter_count}` : ''} vote{liveCount !== 1 ? 's' : ''}
+          </span>
         )}
       </div>
 
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2">
         {status === 'not_started' && !showOpen && (
-          <button onClick={() => { setShowOpen(true); setCodeInput(generateCode()); }}
+          <button onClick={() => setShowOpen(true)}
             className="text-xs font-semibold bg-maroon-700 text-white px-3 py-1.5 rounded-lg tap-target hover:bg-maroon-600 transition-colors">
             🗳️ Open voting
           </button>
@@ -602,6 +635,10 @@ function VotingControls({ meeting, ballot, onChanged }: {
             <button onClick={closeVoting} disabled={busy}
               className="text-xs font-semibold bg-yellow-400 text-stone-900 px-3 py-1.5 rounded-lg tap-target disabled:opacity-50 active:scale-95 transition-transform">
               Close voting
+            </button>
+            <button onClick={() => setShowShare(!showShare)}
+              className="text-xs font-semibold text-white/70 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg tap-target transition-colors">
+              📤 Share link
             </button>
             <button onClick={() => setShowResults(!showResults)}
               className="text-xs text-white/50 hover:text-white px-3 py-1.5 tap-target">
@@ -629,20 +666,53 @@ function VotingControls({ meeting, ballot, onChanged }: {
         )}
       </div>
 
-      {/* Code input panel */}
+      {/* Open voting panel — voter count */}
       {showOpen && (
-        <div className="mt-2 flex items-end gap-3 bg-white/5 rounded-xl p-3">
+        <div className="mt-2 bg-white/5 rounded-xl p-3 space-y-3">
           <div>
-            <label className="text-xs text-white/40 block mb-1">4-digit code for members</label>
-            <input type="text" inputMode="numeric" maxLength={4} value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              className="w-24 bg-white rounded-lg px-3 py-2 text-xl font-mono font-bold text-navy-700 text-center focus:outline-none focus:ring-2 focus:ring-maroon-500" />
+            <label className="text-xs text-white/40 block mb-1">
+              How many members are present? <span className="text-white/20">(optional)</span>
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={voterCount}
+              onChange={(e) => setVoterCount(e.target.value.replace(/\D/g, ''))}
+              placeholder="e.g. 25"
+              className="w-28 bg-white rounded-lg px-3 py-2 text-lg font-bold text-navy-700 text-center focus:outline-none focus:ring-2 focus:ring-maroon-500"
+              autoFocus
+            />
           </div>
-          <button onClick={openVoting} disabled={busy || codeInput.length !== 4}
-            className="text-sm font-semibold bg-green-500 text-white px-4 py-2.5 rounded-xl tap-target disabled:opacity-40 active:scale-95 transition-transform">
-            {busy ? '…' : 'Confirm open'}
+          <div className="flex gap-2">
+            <button onClick={openVoting} disabled={busy}
+              className="text-sm font-semibold bg-green-500 text-white px-4 py-2.5 rounded-xl tap-target disabled:opacity-40 active:scale-95 transition-transform">
+              {busy ? '…' : 'Start voting'}
+            </button>
+            <button onClick={() => { setShowOpen(false); setVoterCount(''); }}
+              className="text-xs text-white/40 hover:text-white tap-target px-3 py-2">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Share panel */}
+      {showShare && (
+        <div className="mt-2 bg-white rounded-xl p-4 space-y-3">
+          <p className="text-sm font-semibold text-stone-700 text-center">Share voting link with members</p>
+          {qrDataUrl ? (
+            <img src={qrDataUrl} alt="QR code for voting" className="w-48 h-48 mx-auto rounded-lg" />
+          ) : (
+            <div className="w-48 h-48 mx-auto rounded-lg bg-stone-100 animate-pulse" />
+          )}
+          <p className="text-[11px] text-stone-400 text-center font-mono break-all">
+            {typeof window !== 'undefined' ? window.location.origin : ''}
+          </p>
+          <button
+            onClick={handleShare}
+            className="w-full bg-maroon-700 text-white rounded-xl py-2.5 text-sm font-semibold tap-target active:scale-95 transition-transform"
+          >
+            {copied ? '✓ Copied!' : '📤 Share / Copy link'}
           </button>
-          <button onClick={() => setShowOpen(false)} className="text-xs text-white/40 hover:text-white tap-target px-2 py-2">Cancel</button>
         </div>
       )}
 

@@ -5,6 +5,7 @@ export interface Ballot {
   meeting_id: string;
   status: BallotStatus;
   meeting_code: string | null;
+  voter_count: number | null;
   opened_at: string | null;
   closed_at: string | null;
   created_at: string;

@@ -13,17 +13,12 @@ interface Props {
 }
 
 type VoteCategory = 'speaker' | 'evaluator' | 'table_topics';
-
 interface Candidate { id: string; name: string }
 
 export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, onClose }: Props) {
   const supabase = createClient();
 
-  const [code, setCode] = useState('');
-  const [codeError, setCodeError] = useState('');
-  const [codeVerified, setCodeVerified] = useState(false);
-
-  const [checking, setChecking] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [alreadyVoted, setAlreadyVoted] = useState(false);
 
   const [selections, setSelections] = useState<Record<VoteCategory, string>>({
@@ -32,7 +27,6 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
-
   const [voteCount, setVoteCount] = useState<number | null>(null);
 
   const fetchVoteCount = useCallback(async () => {
@@ -40,19 +34,17 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
     setVoteCount(data ?? 0);
   }, [ballot.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Once code is verified, check if this device already voted
+  // Check if this device has already voted on mount
   useEffect(() => {
-    if (!codeVerified) return;
-    setChecking(true);
     supabase
       .rpc('has_device_voted', { p_ballot_id: ballot.id, p_device_uuid: deviceId })
       .then(({ data }) => {
         setAlreadyVoted(!!data);
         setChecking(false);
       });
-  }, [codeVerified]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll vote count once submitted / already voted
+  // Poll vote count once submitted or already voted
   useEffect(() => {
     if (!submitted && !alreadyVoted) return;
     fetchVoteCount();
@@ -60,27 +52,18 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
     return () => clearInterval(id);
   }, [submitted, alreadyVoted, fetchVoteCount]);
 
-  function verifyCode() {
-    if (code.trim() === ballot.meeting_code) {
-      setCodeVerified(true);
-      setCodeError('');
-    } else {
-      setCodeError('Wrong code. Ask the admin for today\'s 4-digit code.');
-    }
-  }
-
-  // Build candidate lists
+  // Build candidate lists (self-vote allowed)
   const speakerCandidates: Candidate[] = meeting.role_claims
-    .filter(c => c.role_key === 'speaker' && c.member_id !== memberId)
+    .filter(c => c.role_key === 'speaker')
     .map(c => ({ id: c.member_id, name: c.member?.display_name ?? c.member?.name ?? 'Unknown' }));
 
   const evaluatorCandidates: Candidate[] = meeting.role_claims
-    .filter(c => c.role_key === 'evaluator' && c.member_id !== memberId)
+    .filter(c => c.role_key === 'evaluator')
     .map(c => ({ id: c.member_id, name: c.member?.display_name ?? c.member?.name ?? 'Unknown' }));
 
   const isRegular = meeting.meeting_type === 'regular';
   const ttCandidates: Candidate[] = isRegular
-    ? allMembers.filter(m => m.id !== memberId).map(m => ({ id: m.id, name: m.display_name }))
+    ? allMembers.map(m => ({ id: m.id, name: m.display_name }))
     : [];
 
   type CategoryDef = { key: VoteCategory; label: string; emoji: string; candidates: Candidate[] };
@@ -108,7 +91,6 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
     const { error } = await supabase.from('votes').insert(rows);
     if (error) {
       if (error.code === '23505') {
-        // Unique constraint — this device already voted
         setAlreadyVoted(true);
       } else {
         setSubmitError('Something went wrong. Please try again.');
@@ -117,6 +99,12 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
       setSubmitted(true);
     }
     setSubmitting(false);
+  }
+
+  function voteCountLabel(count: number) {
+    return ballot.voter_count
+      ? `${count} / ${ballot.voter_count} votes`
+      : `${count} ${count === 1 ? 'vote' : 'votes'} submitted`;
   }
 
   return (
@@ -136,54 +124,25 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
 
         <div className="p-5 overflow-y-auto">
 
-          {/* ── Code gate ── */}
-          {!codeVerified && (
-            <div className="space-y-4">
-              <p className="text-sm text-stone-600">
-                Enter the 4-digit code displayed by the admin to unlock the ballot.
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={code}
-                  onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  onKeyDown={e => e.key === 'Enter' && verifyCode()}
-                  placeholder="0000"
-                  className="flex-1 border border-stone-200 rounded-xl px-4 py-3 text-2xl tracking-[0.4em] text-center font-bold focus:outline-none focus:border-maroon-400"
-                  autoFocus
-                />
-                <button
-                  onClick={verifyCode}
-                  className="bg-maroon-700 text-white px-5 py-3 rounded-xl font-semibold hover:bg-maroon-800 transition-colors"
-                >
-                  Enter
-                </button>
-              </div>
-              {codeError && <p className="text-sm text-red-500">{codeError}</p>}
-            </div>
-          )}
-
           {/* ── Checking ── */}
-          {codeVerified && checking && (
+          {checking && (
             <div className="py-10 text-center text-stone-400 text-sm">Checking…</div>
           )}
 
           {/* ── Already voted ── */}
-          {codeVerified && !checking && alreadyVoted && !submitted && (
+          {!checking && alreadyVoted && !submitted && (
             <div className="text-center py-8 space-y-3">
               <div className="text-5xl">✓</div>
               <p className="text-base font-semibold text-stone-800">Your vote is already recorded</p>
               <p className="text-sm text-stone-400">Results will be revealed when the admin closes voting.</p>
               {voteCount !== null && (
-                <p className="text-sm font-medium text-stone-500">{voteCount} {voteCount === 1 ? 'vote' : 'votes'} submitted so far</p>
+                <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
               )}
             </div>
           )}
 
           {/* ── Ballot form ── */}
-          {codeVerified && !checking && !alreadyVoted && !submitted && (
+          {!checking && !alreadyVoted && !submitted && (
             <div className="space-y-6">
               {categories.map(cat => (
                 <div key={cat.key}>
@@ -237,7 +196,7 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
               <p className="text-base font-semibold text-stone-800">Vote submitted!</p>
               <p className="text-sm text-stone-400">Results will be revealed when the admin closes voting.</p>
               {voteCount !== null && (
-                <p className="text-sm font-medium text-stone-500">{voteCount} {voteCount === 1 ? 'vote' : 'votes'} submitted so far</p>
+                <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
               )}
             </div>
           )}
