@@ -96,7 +96,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
                 🏆 View Results
               </button>
             )}
-            {!past && !hideWhatsApp && (
+            {!past && !hideWhatsApp && ballot?.status !== 'open' && ballot?.status !== 'closed' && (
               <WhatsAppCopyButton meeting={meeting} members={allMembers} />
             )}
           </div>
