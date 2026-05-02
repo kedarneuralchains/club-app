@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/client';
 import { MeetingCard } from '@/components/MeetingCard';
 import type { Member, MeetingWithClaims, MeetingType } from '@/lib/types';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const ADMIN_KEY = 'tm_admin';
 
@@ -329,9 +330,9 @@ function AdminPanel() {
     <div className="min-h-screen bg-stone-50">
       <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-maroon-700">🎤</span>
-            <span className="font-serif font-semibold text-stone-900 text-sm">Admin Panel</span>
+          <Link href="/" className="flex flex-col items-start gap-0.5">
+            <Image src="/logo.png" alt="Toastmasters International" width={140} height={25} className="h-6 w-auto" priority />
+            <span className="text-[10px] font-semibold tracking-wide text-navy-600 leading-none">Admin Panel</span>
           </Link>
           <div className="flex items-center gap-3">
             <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Admin</span>

@@ -5,6 +5,7 @@ import { MeetingCard } from '@/components/MeetingCard';
 import { MemberPicker } from '@/components/MemberPicker';
 import { isMeetingPast } from '@/lib/utils';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Home() {
   const { meetings, members, loading, refetch } = useMeetings();
@@ -30,11 +31,10 @@ export default function Home() {
       {/* Top bar */}
       <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-maroon-700 text-lg">🎤</span>
-            <span className="font-serif font-semibold text-stone-900 text-sm leading-tight">
-              Dehradun WIC<br />
-              <span className="font-sans text-xs font-normal text-stone-500">Toastmasters</span>
+          <div className="flex flex-col items-start gap-0.5">
+            <Image src="/logo.png" alt="Toastmasters International" width={160} height={29} className="h-7 w-auto" priority />
+            <span className="text-[10px] font-semibold tracking-wide text-navy-600 leading-none">
+              Dehradun WIC India · Club #03295206
             </span>
           </div>
 
