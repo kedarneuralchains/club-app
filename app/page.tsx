@@ -107,12 +107,12 @@ export default function Home() {
 
       {/* ── Announcement banner ── */}
       {announcement && !announceDismissed && (
-        <div className="bg-amber-400 border-b border-amber-500">
+        <div style={{ backgroundColor: '#A9B2B1', borderBottom: '1px solid #96a09f' }}>
           <div className="max-w-2xl mx-auto px-4 py-2.5 flex items-start gap-3">
-            <span className="text-amber-800 text-sm leading-relaxed flex-1">{announcement.message}</span>
+            <span className="text-stone-900 text-sm leading-relaxed flex-1">{announcement.message}</span>
             <button
               onClick={dismissAnnouncement}
-              className="shrink-0 text-amber-700 hover:text-amber-900 text-lg leading-none tap-target px-1"
+              className="shrink-0 text-stone-600 hover:text-stone-900 text-lg leading-none tap-target px-1"
               aria-label="Dismiss"
             >
               ✕

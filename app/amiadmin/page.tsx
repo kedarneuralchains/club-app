@@ -188,7 +188,7 @@ function MeetingForm({
       <label className="block">
         <span className="text-xs text-stone-500 font-medium">Speaker / Evaluator pairs</span>
         <p className="text-[10px] text-stone-400 mb-1">Each speaker is paired with one evaluator</p>
-        <input type="number" min={1} max={8} value={form.speaker_slots}
+        <input type="number" min={1} max={20} value={form.speaker_slots}
           onChange={(e) => set('speaker_slots', e.target.value)}
           className="mt-1 w-24 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-maroon-700" />
       </label>
