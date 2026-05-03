@@ -11,6 +11,7 @@ interface Props {
   allMembers: Member[];
   memberId: string | null;
   deviceId: string | null;
+  isAdmin?: boolean;
   onClose: () => void;
 }
 
@@ -34,7 +35,7 @@ const CAT_META: Record<VoteCategory, { label: string; emoji: string }> = {
 const ROLE_PLAYER_KEYS: RoleKey[] = ['tmod', 'ge', 'ttm'];
 const AUX_ROLE_KEYS:    RoleKey[] = ['timer', 'grammarian', 'ah_counter', 'harkmaster'];
 
-export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, onClose }: Props) {
+export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, isAdmin, onClose }: Props) {
   const supabase = createClient();
   const isClosed = ballot.status === 'closed';
 
@@ -240,9 +241,11 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
                           <span className={`text-sm flex-1 font-medium ${i === 0 ? 'text-yellow-800' : 'text-stone-600'}`}>
                             {r.voted_for_display_name}
                           </span>
-                          <span className="text-xs text-stone-400 shrink-0">
-                            {r.vote_count} vote{r.vote_count !== 1 ? 's' : ''}
-                          </span>
+                          {isAdmin && (
+                            <span className="text-xs text-stone-400 shrink-0">
+                              {r.vote_count} vote{r.vote_count !== 1 ? 's' : ''}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -270,9 +273,6 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
                   <div className="text-4xl">✓</div>
                   <p className="font-semibold text-stone-800">Your vote is already recorded</p>
                   <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
-                  {voteCount !== null && (
-                    <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
-                  )}
                 </div>
               )}
 
@@ -282,9 +282,6 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, o
                   <div className="text-4xl">✓</div>
                   <p className="font-semibold text-stone-800">Vote submitted!</p>
                   <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
-                  {voteCount !== null && (
-                    <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
-                  )}
                 </div>
               )}
 

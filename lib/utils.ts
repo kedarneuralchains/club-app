@@ -36,15 +36,12 @@ export function isMeetingLocked(meeting: Meeting): boolean {
   return Date.now() >= getMeetingDeadlineUTC(meeting).getTime();
 }
 
-// Meeting is "past" if its date in IST is before today in IST
+// Meeting becomes "past" at 2 PM IST on its own date (2 PM IST = 08:30 UTC).
+// This lets the next meeting surface as "Upcoming" right after the current one ends.
 export function isMeetingPast(meeting: Meeting): boolean {
-  const now = new Date();
-  // Get current date in IST
-  const istNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
   const [y, m, d] = meeting.date.split('-').map(Number);
-  const meetingDate = new Date(y, m - 1, d);
-  const todayIST = new Date(istNow.getFullYear(), istNow.getMonth(), istNow.getDate());
-  return meetingDate < todayIST;
+  const cutoff = new Date(Date.UTC(y, m - 1, d, 8, 30, 0));
+  return Date.now() >= cutoff.getTime();
 }
 
 // Format as ordinal: 3 → "3rd", 21 → "21st"

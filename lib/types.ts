@@ -90,6 +90,22 @@ export const ROLE_META: Record<
   harkmaster: { label: 'Harkmaster',       emoji: '👂',  section: 'tag' },
 };
 
+export interface GuestRegistration {
+  id: string;
+  meeting_id: string | null;
+  name: string | null;
+  phone: string;
+  email: string;
+  created_at: string;
+}
+
+export interface Announcement {
+  id: string;
+  message: string;
+  active: boolean;
+  created_at: string;
+}
+
 // Ordered role slots for a meeting — TTM excluded when speakathon
 export function getMeetingRoles(meeting: Meeting): { roleKey: RoleKey; slot: number }[] {
   const roles: { roleKey: RoleKey; slot: number }[] = [];

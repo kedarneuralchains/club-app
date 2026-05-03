@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { MeetingCard } from '@/components/MeetingCard';
 import { SiteFooter } from '@/components/SiteFooter';
-import type { Member, MeetingWithClaims, MeetingType, Ballot, VoteResult, TTSpeaker } from '@/lib/types';
+import type { Member, MeetingWithClaims, MeetingType, Ballot, VoteResult, TTSpeaker, GuestRegistration, Announcement } from '@/lib/types';
 import { isMeetingPast } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -105,10 +105,13 @@ function MeetingForm({
   function set(field: keyof MeetingFormData, value: string) {
     setForm((f) => {
       const next = { ...f, [field]: value };
-      // Auto-adjust slots when type changes
       if (field === 'meeting_type') {
         next.speaker_slots = value === 'speakathon' ? '4' : '2';
         next.evaluator_slots = value === 'speakathon' ? '4' : '2';
+      }
+      // Speaker and evaluator slots are always kept in sync
+      if (field === 'speaker_slots') {
+        next.evaluator_slots = value;
       }
       return next;
     });
@@ -182,20 +185,13 @@ function MeetingForm({
         </select>
       </label>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block">
-          <span className="text-xs text-stone-500 font-medium">Speaker slots</span>
-          <input type="number" min={1} max={8} value={form.speaker_slots}
-            onChange={(e) => set('speaker_slots', e.target.value)}
-            className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-maroon-700" />
-        </label>
-        <label className="block">
-          <span className="text-xs text-stone-500 font-medium">Evaluator slots</span>
-          <input type="number" min={1} max={8} value={form.evaluator_slots}
-            onChange={(e) => set('evaluator_slots', e.target.value)}
-            className="mt-1 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-maroon-700" />
-        </label>
-      </div>
+      <label className="block">
+        <span className="text-xs text-stone-500 font-medium">Speaker / Evaluator pairs</span>
+        <p className="text-[10px] text-stone-400 mb-1">Each speaker is paired with one evaluator</p>
+        <input type="number" min={1} max={8} value={form.speaker_slots}
+          onChange={(e) => set('speaker_slots', e.target.value)}
+          className="mt-1 w-24 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-maroon-700" />
+      </label>
 
       <div className="flex gap-3 pt-1">
         <button type="submit" disabled={saving}
@@ -280,14 +276,16 @@ function AdminPanel() {
   const [meetings, setMeetings] = useState<MeetingWithClaims[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [ballotsMap, setBallotsMap] = useState<Map<string, Ballot>>(new Map());
+  const [guestRegs, setGuestRegs] = useState<GuestRegistration[]>([]);
+  const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'meetings' | 'members'>('meetings');
+  const [tab, setTab] = useState<'meetings' | 'members' | 'guests' | 'announce'>('meetings');
   const [showNewMeeting, setShowNewMeeting] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState<MeetingWithClaims | null>(null);
   const [memberFilter, setMemberFilter] = useState<'active' | 'all'>('active');
 
   const fetchAll = useCallback(async () => {
-    const [{ data: m }, { data: mb }, { data: bl }] = await Promise.all([
+    const [{ data: m }, { data: mb }, { data: bl }, { data: gr }, { data: ann }] = await Promise.all([
       supabase
         .from('meetings')
         .select('*, role_claims(*, member:members(*))')
@@ -295,10 +293,14 @@ function AdminPanel() {
         .limit(10),
       supabase.from('members').select('*').order('name'),
       supabase.from('ballots').select('*'),
+      supabase.from('guest_registrations').select('*').order('created_at', { ascending: false }),
+      supabase.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1),
     ]);
     if (m) setMeetings(m as MeetingWithClaims[]);
     if (mb) setMembers(mb as Member[]);
     if (bl) setBallotsMap(new Map((bl as Ballot[]).map((b) => [b.meeting_id, b])));
+    if (gr) setGuestRegs(gr as GuestRegistration[]);
+    setCurrentAnnouncement((ann as Announcement[] | null)?.[0] ?? null);
     setLoading(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -359,14 +361,19 @@ function AdminPanel() {
       <div className="max-w-2xl mx-auto px-4 pt-4">
         {/* Tabs */}
         <div className="flex gap-1 bg-white/10 p-1 rounded-xl mb-6">
-          {(['meetings', 'members'] as const).map((t) => (
+          {([
+            { id: 'meetings', label: 'Meetings' },
+            { id: 'members', label: 'Members' },
+            { id: 'guests', label: 'Guests' },
+            { id: 'announce', label: 'Announce' },
+          ] as const).map(({ id, label }) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-colors tap-target
-                ${tab === t ? 'bg-white text-navy-700 shadow-sm' : 'text-white/60 hover:text-white'}`}
+              key={id}
+              onClick={() => setTab(id)}
+              className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors tap-target
+                ${tab === id ? 'bg-white text-navy-700 shadow-sm' : 'text-white/60 hover:text-white'}`}
             >
-              {t}
+              {label}
             </button>
           ))}
         </div>
@@ -375,6 +382,10 @@ function AdminPanel() {
           <div className="space-y-3">
             {[1,2,3].map(i => <div key={i} className="bg-white/10 rounded-2xl h-32 animate-pulse" />)}
           </div>
+        ) : tab === 'guests' ? (
+          <GuestLog guestRegs={guestRegs} meetings={meetings} />
+        ) : tab === 'announce' ? (
+          <AnnouncementPanel current={currentAnnouncement} onChanged={fetchAll} />
         ) : tab === 'meetings' ? (
           <div className="space-y-4 pb-8">
             {!showNewMeeting && !editingMeeting && (
@@ -894,6 +905,116 @@ function VotingControls({ meeting, ballot, allMembers, onChanged }: {
           </div>
         )}
 
+      </div>
+    </div>
+  );
+}
+
+// ─── Guest Log ────────────────────────────────────────────────────────────────
+
+function GuestLog({ guestRegs, meetings }: { guestRegs: GuestRegistration[]; meetings: MeetingWithClaims[] }) {
+  const meetingMap = new Map(meetings.map((m) => [m.id, m]));
+
+  if (guestRegs.length === 0) {
+    return (
+      <div className="text-center py-16 text-white/30 text-sm">
+        No guests registered yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 pb-8">
+      <p className="text-xs text-white/40 mb-3">
+        {guestRegs.length} guest registration{guestRegs.length !== 1 ? 's' : ''}
+      </p>
+      {guestRegs.map((g) => {
+        const meeting = g.meeting_id ? meetingMap.get(g.meeting_id) : undefined;
+        return (
+          <div key={g.id} className="bg-white rounded-xl p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-stone-800 truncate">{g.name || '—'}</p>
+                <p className="text-xs text-stone-500 mt-0.5">{g.phone}</p>
+                <p className="text-xs text-stone-500">{g.email}</p>
+              </div>
+              <div className="text-right shrink-0">
+                {meeting && (
+                  <p className="text-xs font-semibold text-maroon-700">Meeting #{meeting.number}</p>
+                )}
+                <p className="text-xs text-stone-400 mt-0.5">
+                  {new Date(g.created_at).toLocaleDateString('en-IN', {
+                    day: 'numeric', month: 'short', year: 'numeric',
+                  })}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Announcement Panel ───────────────────────────────────────────────────────
+
+function AnnouncementPanel({ current, onChanged }: { current: Announcement | null; onChanged: () => void }) {
+  const supabase = createClient();
+  const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function post() {
+    if (!text.trim()) return;
+    setSaving(true);
+    await supabase.from('announcements').update({ active: false }).eq('active', true);
+    await supabase.from('announcements').insert({ message: text.trim(), active: true });
+    setText('');
+    setSaving(false);
+    onChanged();
+  }
+
+  async function clear() {
+    if (!current) return;
+    await supabase.from('announcements').update({ active: false }).eq('id', current.id);
+    onChanged();
+  }
+
+  return (
+    <div className="space-y-4 pb-8">
+      {current && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-widest mb-2">Active announcement</p>
+          <p className="text-sm text-stone-800 whitespace-pre-wrap leading-relaxed">{current.message}</p>
+          <button
+            onClick={clear}
+            className="mt-3 text-xs text-red-500 hover:text-red-700 tap-target"
+          >
+            Clear announcement
+          </button>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl border border-stone-200 p-4 space-y-3">
+        <h3 className="font-serif font-semibold text-stone-900 text-sm">
+          {current ? 'Replace announcement' : 'Post announcement'}
+        </h3>
+        <p className="text-xs text-stone-400 -mt-1">Shown as a banner to all users when they open the app.</p>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type your announcement here…"
+          rows={3}
+          className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-maroon-700 resize-none"
+        />
+        <button
+          onClick={post}
+          disabled={!text.trim() || saving}
+          className="w-full bg-maroon-700 text-white rounded-xl py-2.5 text-sm font-semibold
+                     disabled:opacity-40 tap-target active:scale-95 transition-transform"
+        >
+          {saving ? 'Posting…' : 'Post'}
+        </button>
       </div>
     </div>
   );

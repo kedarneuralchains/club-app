@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMeetings } from '@/hooks/useMeetings';
 import { useIdentity } from '@/hooks/useIdentity';
 import { MeetingCard } from '@/components/MeetingCard';
@@ -17,10 +17,25 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'past',     label: 'Past' },
 ];
 
+const DISMISS_KEY = (id: string) => `tm_announcement_${id}`;
+
 export default function Home() {
-  const { meetings, members, ballots, loading, refetch } = useMeetings();
+  const { meetings, members, ballots, announcement, loading, refetch } = useMeetings();
   const { memberId, deviceId, loaded, identify, clearIdentity } = useIdentity();
   const [activeTab, setActiveTab] = useState<Tab>('next');
+  const [announceDismissed, setAnnounceDismissed] = useState(true);
+
+  // Sync dismiss state when announcement changes (e.g. new one posted via realtime)
+  useEffect(() => {
+    if (!announcement) { setAnnounceDismissed(true); return; }
+    setAnnounceDismissed(localStorage.getItem(DISMISS_KEY(announcement.id)) === '1');
+  }, [announcement?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function dismissAnnouncement() {
+    if (!announcement) return;
+    localStorage.setItem(DISMISS_KEY(announcement.id), '1');
+    setAnnounceDismissed(true);
+  }
 
   const isGuest = memberId === 'guest';
   const currentMember = isGuest ? null : members.find((m) => m.id === memberId);
@@ -90,6 +105,22 @@ export default function Home() {
         </div>
       </header>
 
+      {/* ── Announcement banner ── */}
+      {announcement && !announceDismissed && (
+        <div className="bg-amber-400 border-b border-amber-500">
+          <div className="max-w-2xl mx-auto px-4 py-2.5 flex items-start gap-3">
+            <span className="text-amber-800 text-sm leading-relaxed flex-1">{announcement.message}</span>
+            <button
+              onClick={dismissAnnouncement}
+              className="shrink-0 text-amber-700 hover:text-amber-900 text-lg leading-none tap-target px-1"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Tab bar ── */}
       <div className="sticky top-16 z-30 bg-navy-700 border-b border-white/5 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-2">
@@ -150,7 +181,14 @@ export default function Home() {
       <SiteFooter />
 
       {/* Member picker overlay */}
-      {showPicker && <MemberPicker members={members} onSelect={identify} onGuest={handleGuest} />}
+      {showPicker && (
+        <MemberPicker
+          members={members}
+          meetingId={nextMeeting?.id ?? null}
+          onSelect={identify}
+          onGuest={handleGuest}
+        />
+      )}
     </div>
   );
 }
