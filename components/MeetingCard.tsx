@@ -168,7 +168,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
           ))}
         </RoleSection>
 
-        <RoleSection label="Tag Roles">
+        <RoleSection label="Auxiliary Roles">
           {tagRoles.map(({ roleKey, slot }) => (
             <RoleSlot
               key={`${roleKey}:${slot}`}

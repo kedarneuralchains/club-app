@@ -12,7 +12,7 @@ export function roleClaimBlocked(
   if (existingRoles.length >= 3) return 'Max 3 roles per meeting';
   if (targetRole === 'speaker' && existingRoles.includes('speaker')) return 'Cannot take two speaker slots';
   if (TAG_ROLES.includes(targetRole) && existingRoles.some((r) => TAG_ROLES.includes(r))) {
-    return 'Only one tag role per member';
+    return 'Only one auxiliary role per member';
   }
   return null;
 }
@@ -119,8 +119,8 @@ export function buildWhatsAppAgenda(
   }
   lines.push(`📋 GE- ${getClaimName('ge', 1)}`);
 
-  // Tag Roles
-  lines.push('Tag Roles:');
+  // Auxiliary Roles
+  lines.push('Auxiliary Roles:');
   lines.push(`📚 Grammarian- ${getClaimName('grammarian', 1)}`);
   lines.push(`🔍 Ah-Counter- ${getClaimName('ah_counter', 1)}`);
   lines.push(`⌛️ Timer- ${getClaimName('timer', 1)}`);
