@@ -68,8 +68,31 @@ export interface RoleClaim {
   member_id: string;
   claimed_at: string;
   admin_override: boolean;
+  // Speaker-only fields (Pathways speech details)
+  path: string | null;
+  speech_level: number | null;
+  project: string | null;
+  speech_title: string | null;
   member?: Member | null;
 }
+
+// Toastmasters Pathways learning paths
+export const PATHS = [
+  'Dynamic Leadership',
+  'Effective Coaching',
+  'Engaging Humor',
+  'Innovative Planning',
+  'Leadership Development',
+  'Motivational Strategies',
+  'Persuasive Influence',
+  'Presentation Mastery',
+  'Strategic Relationships',
+  'Team Collaboration',
+  'Visionary Communication',
+] as const;
+
+export type Path = (typeof PATHS)[number];
+export const LEVELS = [1, 2, 3, 4, 5] as const;
 
 export interface MeetingWithClaims extends Meeting {
   role_claims: RoleClaim[];

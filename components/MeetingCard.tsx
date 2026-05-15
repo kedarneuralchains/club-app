@@ -73,9 +73,6 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
             <p className="text-sm text-stone-500 mt-0.5">
               {formatMeetingDate(meeting.date)}&nbsp;·&nbsp;<span className="whitespace-nowrap">{formatTime(meeting.start_time)}–{formatTime(meeting.end_time)} IST</span>
             </p>
-            {meeting.theme && (
-              <p className="text-sm font-medium text-stone-700 mt-0.5">🌐 {meeting.theme}</p>
-            )}
           </div>
           <div className="flex items-center gap-2">
             {ballot?.status === 'open' && memberId && deviceId && (
@@ -108,6 +105,27 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
           </p>
         )}
       </div>
+
+      {/* Theme band — meeting's headline, visually prominent */}
+      {meeting.theme && (
+        <div className={`px-4 py-3 border-b flex items-start gap-3
+          ${past
+            ? 'bg-stone-50 border-stone-100'
+            : 'bg-gradient-to-r from-maroon-50 to-yellow-100 border-maroon-100'}`}
+        >
+          <span className="text-2xl leading-none shrink-0 mt-0.5">🌐</span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-maroon-600/70">
+              Theme
+            </p>
+            <p className={`font-serif text-base sm:text-lg font-bold leading-snug
+              ${past ? 'text-stone-600' : 'text-maroon-800'}`}
+            >
+              {meeting.theme}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Role slots */}
       <div className="p-4 space-y-4">
