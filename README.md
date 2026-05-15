@@ -68,23 +68,25 @@ npm install
    - **Publishable key** (Settings → API → `anon` / `publishable` key)
    - **Service role key** (Settings → API → `service_role`, only needed for the import script — keep this secret)
 
-### 3. Run database migrations
+### 3. Set up the database
 
-Open the Supabase SQL editor and run the files in `supabase/migrations/` **in numeric order**:
+**Fresh install (recommended):** open the Supabase SQL editor, paste the contents of `supabase/schema.sql`, and run. This single file creates every table, RLS policy, function, and realtime publication the app needs.
+
+**Upgrading an existing deployment:** apply only the un-run migrations from `supabase/migrations/`, in numeric order. The migration history is preserved for this purpose:
 
 ```
-001_schema.sql          — core tables: members, meetings, role_claims + RLS
-002_voting.sql          — ballots, votes, results aggregator function
-003_voter_count.sql     — voter cap on ballots
-004_ballot_v2.sql       — 5-category voting + Table Topics speakers + guest votees
-005_vote_unique.sql     — one-vote-per-device constraint
-006_delete_votes_rpc.sql — admin-only vote deletion via SECURITY DEFINER
-007_guest_announce.sql  — guest registrations + announcements
-008_speech_details.sql  — Pathways Path/Level/Project/Title on speaker claims
-009_members_anon_write.sql — anon insert/update policy for members (admin panel)
+001_schema.sql              — core tables: members, meetings, role_claims + RLS
+002_voting.sql              — ballots, votes, results aggregator function
+003_voter_count.sql         — voter cap on ballots
+004_ballot_v2.sql           — 5-category voting + Table Topics speakers + guest votees
+005_vote_unique.sql         — one-vote-per-device constraint
+006_delete_votes_rpc.sql    — admin-only vote deletion via SECURITY DEFINER
+007_guest_announce.sql      — guest registrations + announcements
+008_speech_details.sql      — Pathways Path/Level/Project/Title on speaker claims
+009_members_anon_write.sql  — anon insert/update policy for members (admin panel)
 ```
 
-Each migration is idempotent (uses `if not exists` / `or replace`), so re-running is safe.
+All migrations are idempotent (`if not exists` / `or replace`), so re-running is safe.
 
 ### 4. Configure environment variables
 
@@ -203,7 +205,8 @@ lib/
   utils.ts              — role-pair rules, meeting lifecycle, WhatsApp builder
 scripts/
   import-from-excel.ts  — one-time member roster importer
-supabase/migrations/    — schema, RLS, RPCs (run in numeric order)
+supabase/schema.sql     — consolidated schema for fresh installs
+supabase/migrations/    — historical migrations (run in order to upgrade existing DBs)
 utils/supabase/         — typed client wrapper
 ```
 
