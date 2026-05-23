@@ -273,6 +273,9 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, i
                   <div className="text-4xl">✓</div>
                   <p className="font-semibold text-stone-800">Your vote is already recorded</p>
                   <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
+                  {voteCount !== null && (
+                    <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
+                  )}
                 </div>
               )}
 
@@ -282,6 +285,9 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, i
                   <div className="text-4xl">✓</div>
                   <p className="font-semibold text-stone-800">Vote submitted!</p>
                   <p className="text-sm text-stone-400">Results revealed when voting closes.</p>
+                  {voteCount !== null && (
+                    <p className="text-sm font-medium text-stone-500">{voteCountLabel(voteCount)}</p>
+                  )}
                 </div>
               )}
 
