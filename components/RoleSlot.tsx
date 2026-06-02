@@ -42,7 +42,8 @@ export function RoleSlot({
   // Editable by the claimant or admin up until the meeting is past (more
   // permissive than role-claim lock — speakers often finalise the title late).
   const isSpeaker = roleKey === 'speaker';
-  const canEditDetails = !!claim && isSpeaker && !isPast && (isOwn || isAdmin);
+  // Owner can edit only until the meeting is past; admin can edit anytime.
+  const canEditDetails = !!claim && isSpeaker && (isAdmin || (isOwn && !isPast));
 
   async function handleClaim() {
     if (!memberId || !canClaim || busy) return;
@@ -85,8 +86,9 @@ export function RoleSlot({
     ? `TM ${claim.member.display_name}`
     : claim?.member?.name ?? '…';
 
-  // ── Read-only (past or locked for non-admin) ─────────────────────────────
-  if (isPast || (isLocked && !isAdmin)) {
+  // ── Read-only (past or locked) — admin keeps edit control to fix
+  //    role players post-hoc, e.g. re-adding a disqualified speaker. ──────────
+  if ((isPast || isLocked) && !isAdmin) {
     return (
       <>
         <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-stone-50">
