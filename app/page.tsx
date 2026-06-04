@@ -4,8 +4,9 @@ import { useMeetings } from '@/hooks/useMeetings';
 import { useIdentity } from '@/hooks/useIdentity';
 import { MeetingCard } from '@/components/MeetingCard';
 import { MemberPicker } from '@/components/MemberPicker';
+import { MemberAdviceModal } from '@/components/MemberAdviceModal';
 import { SiteFooter } from '@/components/SiteFooter';
-import { isMeetingPast } from '@/lib/utils';
+import { isMeetingPast, getAdjacentMemberRoles } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -18,12 +19,14 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 const DISMISS_KEY = (id: string) => `tm_announcement_${id}`;
+const ADVICE_KEY = (id: string) => `tm_advice_${id}`;
 
 export default function Home() {
   const { meetings, members, ballots, announcement, loading, refetch } = useMeetings();
   const { memberId, deviceId, loaded, identify, clearIdentity } = useIdentity();
   const [activeTab, setActiveTab] = useState<Tab>('next');
   const [announceDismissed, setAnnounceDismissed] = useState(true);
+  const [showAdvice, setShowAdvice] = useState(false);
 
   // Sync dismiss state when announcement changes (e.g. new one posted via realtime)
   useEffect(() => {
@@ -39,6 +42,22 @@ export default function Home() {
 
   const isGuest = memberId === 'guest';
   const currentMember = isGuest ? null : members.find((m) => m.id === memberId);
+
+  // Show the rotation-advice modal when a member identity is active: always on
+  // a fresh sign-in (handleSelect clears the flag), and once per browser
+  // session when the app opens with a name already remembered.
+  useEffect(() => {
+    if (!loaded || loading || !currentMember) return;
+    if (sessionStorage.getItem(ADVICE_KEY(currentMember.id)) === '1') return;
+    setShowAdvice(true);
+    sessionStorage.setItem(ADVICE_KEY(currentMember.id), '1');
+  }, [loaded, loading, currentMember?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Picking a name always re-shows the advice modal, even within the same session.
+  function handleSelect(id: string) {
+    if (id !== 'guest') sessionStorage.removeItem(ADVICE_KEY(id));
+    identify(id);
+  }
 
   const future = meetings
     .filter((m) => !isMeetingPast(m))
@@ -167,6 +186,9 @@ export default function Home() {
                 meeting={m}
                 allMembers={members}
                 memberId={memberId}
+                memberAdjacentRoles={
+                  currentMember ? getAdjacentMemberRoles(meetings, m.id, currentMember.id) : []
+                }
                 deviceId={deviceId}
                 ballot={ballots.get(m.id)}
                 isAdmin={false}
@@ -185,8 +207,17 @@ export default function Home() {
         <MemberPicker
           members={members}
           meetingId={nextMeeting?.id ?? null}
-          onSelect={identify}
+          onSelect={handleSelect}
           onGuest={handleGuest}
+        />
+      )}
+
+      {/* Rotation-advice modal for members */}
+      {showAdvice && currentMember && (
+        <MemberAdviceModal
+          member={currentMember}
+          meetings={meetings}
+          onClose={() => setShowAdvice(false)}
         />
       )}
     </div>

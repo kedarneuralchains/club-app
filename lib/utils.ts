@@ -17,6 +17,61 @@ export function roleClaimBlocked(
   return null;
 }
 
+// Rotation rule: a member may not hold the same role in two consecutive
+// meetings. Evaluator is exempt — the club has few evaluators and the VPED
+// routinely reassigns them. Admins bypass this entirely (admin override).
+// `adjacentRoles` are the roles the member already holds in the immediately
+// previous and immediately next meetings (see getAdjacentMemberRoles).
+export function consecutiveRoleBlocked(
+  targetRole: RoleKey,
+  adjacentRoles: RoleKey[]
+): string | null {
+  if (targetRole === 'evaluator') return null;
+  if (adjacentRoles.includes(targetRole)) {
+    return 'Same role back-to-back';
+  }
+  return null;
+}
+
+// Roles the member holds in the meetings immediately before and after the
+// given meeting (by meeting number, so gaps in numbering are handled). Used to
+// enforce the no-repeat-in-consecutive-meetings rule.
+export function getAdjacentMemberRoles(
+  meetings: MeetingWithClaims[],
+  meetingId: string,
+  memberId: string
+): RoleKey[] {
+  const sorted = [...meetings].sort((a, b) => a.number - b.number);
+  const i = sorted.findIndex((m) => m.id === meetingId);
+  if (i === -1) return [];
+  const neighbours = [sorted[i - 1], sorted[i + 1]].filter(Boolean) as MeetingWithClaims[];
+  const roles = new Set<RoleKey>();
+  for (const mtg of neighbours) {
+    for (const c of mtg.role_claims) {
+      if (c.member_id === memberId) roles.add(c.role_key);
+    }
+  }
+  return [...roles];
+}
+
+// The member's most recent meetings (by number, newest first) in which they
+// held at least one role, capped at `limit`. Drives the advice modal so a
+// member can see their recent rotation at a glance.
+export function getMemberRecentRoles(
+  meetings: MeetingWithClaims[],
+  memberId: string,
+  limit = 5
+): { meeting: MeetingWithClaims; roles: RoleKey[] }[] {
+  return [...meetings]
+    .sort((a, b) => b.number - a.number)
+    .map((m) => ({
+      meeting: m,
+      roles: m.role_claims.filter((c) => c.member_id === memberId).map((c) => c.role_key),
+    }))
+    .filter((x) => x.roles.length > 0)
+    .slice(0, limit);
+}
+
 // IST = UTC+5:30. Meeting deadline is start_time IST on meeting date.
 // start_time stored as "HH:MM:SS".
 export function getMeetingDeadlineUTC(meeting: Meeting): Date {

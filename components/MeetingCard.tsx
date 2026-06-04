@@ -11,6 +11,7 @@ interface Props {
   meeting: MeetingWithClaims;
   allMembers: Member[];
   memberId: string | null;
+  memberAdjacentRoles?: RoleKey[];
   deviceId?: string | null;
   ballot?: Ballot;
   isAdmin: boolean;
@@ -18,7 +19,7 @@ interface Props {
   onChanged: () => void;
 }
 
-export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, isAdmin, hideWhatsApp, onChanged }: Props) {
+export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles = [], deviceId, ballot, isAdmin, hideWhatsApp, onChanged }: Props) {
   const [showBallot, setShowBallot] = useState(false);
   const locked = isMeetingLocked(meeting);
   const past = isMeetingPast(meeting);
@@ -139,6 +140,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               claim={claimsMap.get(`${roleKey}:${slot}`) ?? null}
               memberId={memberId}
               memberExistingRoles={memberExistingRoles}
+              memberAdjacentRoles={memberAdjacentRoles}
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
@@ -158,6 +160,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               claim={claimsMap.get(`${roleKey}:${slot}`) ?? null}
               memberId={memberId}
               memberExistingRoles={memberExistingRoles}
+              memberAdjacentRoles={memberAdjacentRoles}
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
@@ -177,6 +180,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               claim={claimsMap.get(`${roleKey}:${slot}`) ?? null}
               memberId={memberId}
               memberExistingRoles={memberExistingRoles}
+              memberAdjacentRoles={memberAdjacentRoles}
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
@@ -196,6 +200,7 @@ export function MeetingCard({ meeting, allMembers, memberId, deviceId, ballot, i
               claim={claimsMap.get(`${roleKey}:${slot}`) ?? null}
               memberId={memberId}
               memberExistingRoles={memberExistingRoles}
+              memberAdjacentRoles={memberAdjacentRoles}
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import type { Member, RoleClaim, RoleKey } from '@/lib/types';
 import { LEVELS, PATHS, ROLE_META } from '@/lib/types';
-import { roleClaimBlocked } from '@/lib/utils';
+import { roleClaimBlocked, consecutiveRoleBlocked } from '@/lib/utils';
 
 interface Props {
   meetingId: string;
@@ -12,6 +12,7 @@ interface Props {
   claim: RoleClaim | null;
   memberId: string | null;
   memberExistingRoles: RoleKey[];
+  memberAdjacentRoles?: RoleKey[];
   isLocked: boolean;
   isPast: boolean;
   isAdmin: boolean;
@@ -21,7 +22,7 @@ interface Props {
 
 export function RoleSlot({
   meetingId, roleKey, slotIndex, claim, memberId, memberExistingRoles,
-  isLocked, isPast, isAdmin, allMembers = [], onChanged,
+  memberAdjacentRoles = [], isLocked, isPast, isAdmin, allMembers = [], onChanged,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [assigning, setAssigning] = useState(false);
@@ -34,6 +35,7 @@ export function RoleSlot({
   const isGuest = memberId === 'guest';
   const blockReason = (!claim && memberId && !isGuest && !isAdmin)
     ? roleClaimBlocked(roleKey, memberExistingRoles)
+      ?? consecutiveRoleBlocked(roleKey, memberAdjacentRoles)
     : null;
   const canClaim = !claim && memberId && !isGuest && (!isLocked || isAdmin) && !blockReason;
   const isMultiRole = memberExistingRoles.length > 0;
