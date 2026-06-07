@@ -77,7 +77,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
               {formatMeetingDate(meeting.date)}&nbsp;·&nbsp;<span className="whitespace-nowrap">{formatTime(meeting.start_time)}–{formatTime(meeting.end_time)} IST</span>
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
             {ballot?.status === 'open' && memberId && deviceId && (
               <button
                 onClick={() => setShowBallot(true)}

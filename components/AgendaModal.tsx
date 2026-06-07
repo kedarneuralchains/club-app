@@ -1,5 +1,6 @@
 'use client';
 import { useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import type { MeetingWithClaims, Member } from '@/lib/types';
 import { buildAgenda, ROLE_BLANK } from '@/lib/agenda';
 import { formatMeetingDate } from '@/lib/utils';
@@ -18,7 +19,11 @@ export function AgendaModal({ meeting, allMembers, onClose }: Props) {
     return buildAgenda(meeting, byId);
   }, [meeting, allMembers]);
 
-  return (
+  // Portal to <body> so the fixed overlay covers the page's sticky header
+  // (otherwise it can bleed through above the sheet on narrow screens).
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
       className="agenda-overlay fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-0 sm:p-4 overflow-y-auto"
       onClick={onClose}
@@ -127,6 +132,7 @@ export function AgendaModal({ meeting, allMembers, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
