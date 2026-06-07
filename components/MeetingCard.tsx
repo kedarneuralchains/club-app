@@ -6,6 +6,7 @@ import { formatMeetingDate, formatTime, isMeetingLocked, isMeetingPast } from '@
 import { RoleSlot } from './RoleSlot';
 import { WhatsAppCopyButton } from './WhatsAppCopyButton';
 import { BallotModal } from './BallotModal';
+import { AgendaModal } from './AgendaModal';
 
 interface Props {
   meeting: MeetingWithClaims;
@@ -21,6 +22,7 @@ interface Props {
 
 export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles = [], deviceId, ballot, isAdmin, hideWhatsApp, onChanged }: Props) {
   const [showBallot, setShowBallot] = useState(false);
+  const [showAgenda, setShowAgenda] = useState(false);
   const locked = isMeetingLocked(meeting);
   const past = isMeetingPast(meeting);
 
@@ -97,6 +99,13 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
             {!past && !hideWhatsApp && ballot?.status !== 'open' && ballot?.status !== 'closed' && (
               <WhatsAppCopyButton meeting={meeting} members={allMembers} />
             )}
+            <button
+              onClick={() => setShowAgenda(true)}
+              className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs px-3 py-1.5
+                         rounded-full transition-colors shadow-sm shrink-0"
+            >
+              📋 Agenda
+            </button>
           </div>
         </div>
 
@@ -221,6 +230,14 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
         deviceId={deviceId ?? null}
         isAdmin={isAdmin}
         onClose={() => setShowBallot(false)}
+      />
+    )}
+
+    {showAgenda && (
+      <AgendaModal
+        meeting={meeting}
+        allMembers={allMembers}
+        onClose={() => setShowAgenda(false)}
       />
     )}
     </>

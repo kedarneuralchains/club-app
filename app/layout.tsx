@@ -30,7 +30,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${montserrat.variable} ${sourceSans.variable}`}>
-      <body>{children}</body>
+      {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla adds
+          cz-shortcut-listen) mutate <body> before hydration; this silences the
+          resulting false-positive mismatch without affecting our own markup. */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

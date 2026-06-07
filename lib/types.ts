@@ -73,6 +73,8 @@ export interface RoleClaim {
   speech_level: number | null;
   project: string | null;
   speech_title: string | null;
+  speech_min_minutes: number | null;
+  speech_max_minutes: number | null;
   member?: Member | null;
 }
 

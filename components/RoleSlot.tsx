@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/client';
 import type { Member, RoleClaim, RoleKey } from '@/lib/types';
 import { LEVELS, PATHS, ROLE_META } from '@/lib/types';
 import { roleClaimBlocked, consecutiveRoleBlocked } from '@/lib/utils';
+import { defaultSpeechTime } from '@/lib/agenda';
 
 interface Props {
   meetingId: string;
@@ -275,8 +276,13 @@ function SpeechEditor({
   const [level, setLevel] = useState<string>(claim.speech_level?.toString() ?? '');
   const [project, setProject] = useState<string>(claim.project ?? '');
   const [title, setTitle] = useState<string>(claim.speech_title ?? '');
+  const [minMin, setMinMin] = useState<string>(claim.speech_min_minutes?.toString() ?? '');
+  const [maxMin, setMaxMin] = useState<string>(claim.speech_max_minutes?.toString() ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Placeholder shows the level-based default that applies when left blank.
+  const def = defaultSpeechTime(level ? Number(level) : null);
 
   async function save() {
     setBusy(true);
@@ -288,6 +294,8 @@ function SpeechEditor({
         speech_level: level ? Number(level) : null,
         project: project.trim() || null,
         speech_title: title.trim() || null,
+        speech_min_minutes: minMin ? Number(minMin) : null,
+        speech_max_minutes: maxMin ? Number(maxMin) : null,
       })
       .eq('id', claim.id);
     setBusy(false);
@@ -342,6 +350,31 @@ function SpeechEditor({
                    focus:outline-none focus:ring-1 focus:ring-maroon-400"
         maxLength={160}
       />
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-stone-400 shrink-0">Speech time (min):</span>
+        <input
+          type="number"
+          value={minMin}
+          onChange={(e) => setMinMin(e.target.value)}
+          placeholder={`${def.min}`}
+          min={1}
+          max={60}
+          className="w-16 text-sm border border-stone-200 rounded-lg px-2 py-1.5 bg-white text-stone-800
+                     focus:outline-none focus:ring-1 focus:ring-maroon-400"
+        />
+        <span className="text-xs text-stone-400">to</span>
+        <input
+          type="number"
+          value={maxMin}
+          onChange={(e) => setMaxMin(e.target.value)}
+          placeholder={`${def.max}`}
+          min={1}
+          max={60}
+          className="w-16 text-sm border border-stone-200 rounded-lg px-2 py-1.5 bg-white text-stone-800
+                     focus:outline-none focus:ring-1 focus:ring-maroon-400"
+        />
+        <span className="text-[11px] text-stone-400">leave blank for level default</span>
+      </div>
       {err && <p className="text-xs text-red-500">{err}</p>}
       <div className="flex items-center gap-2">
         <button
