@@ -50,7 +50,7 @@ export function SiteFooter() {
               </div>
             </a>
             <a
-              href="https://wa.me/919068805581"
+              href="https://wa.me/917248657059"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 group"
@@ -58,9 +58,9 @@ export function SiteFooter() {
               <WhatsAppIcon />
               <div>
                 <p className="text-sm font-medium text-white/80 group-hover:text-green-400 transition-colors">
-                  TM Dash
+                  TM Paras
                 </p>
-                <p className="text-xs text-white/40">VP Public Relations · +91 90688 05581</p>
+                <p className="text-xs text-white/40">VP Education · +91 724 865 7059</p>
               </div>
             </a>
           </div>
