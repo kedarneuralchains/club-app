@@ -116,7 +116,8 @@ export function RoleSlot({
     });
 
     if (error) {
-      console.error(error);
+      console.error('Supabase error claiming role:', error.message, error.details);
+      alert(`Error claiming role: ${error.message || 'Database schema out of sync. Please apply migration 011_speaker_approval.sql.'}`);
       setBusy(false);
       return;
     }
