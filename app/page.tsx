@@ -100,7 +100,7 @@ export default function Home() {
               <Image src="/logo.png" alt="Toastmasters International" width={100} height={24} className="h-6 w-auto" priority />
             </div>
             <p className="text-[10px] font-bold text-white leading-tight w-full truncate">Dehradun WIC India Toastmasters Club</p>
-            <p className="text-[8px] text-white/55 leading-none w-full truncate">No. 03295206 · Area 03 · Division B · District 41</p>
+            <p className="text-[8px] text-white/55 leading-none w-full truncate">No. 03295206 · Area 03 · Division B · District 224</p>
           </div>
 
           {/* Right: identity controls */}
@@ -156,9 +156,10 @@ export default function Home() {
                     href="https://www.instagram.com/d224toastmasters?igsh=MWMwb2QxNTczMHJlag=="
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 py-2.5 text-xs font-semibold rounded-lg text-white/60 hover:text-white transition-all text-center flex items-center justify-center gap-1"
+                    className="flex-1 py-2.5 text-xs font-semibold rounded-lg text-white/60 hover:text-white transition-all text-center flex flex-col sm:flex-row items-center justify-center gap-0 sm:gap-1 leading-tight sm:leading-normal"
                   >
-                    {labelText} ↗
+                    <span>Updates</span>
+                    <span>D224</span>
                   </a>
                 );
               }
