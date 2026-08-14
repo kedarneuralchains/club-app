@@ -664,12 +664,12 @@ function VotingControls({ meeting, ballot, allMembers, onChanged }: {
     await supabase.rpc('delete_ballot_votes', { p_ballot_id: ballot.id });
     await supabase.from('ballots').update({
       status: 'not_started', meeting_code: null, voter_count: null,
-      table_topics_speakers: [], opened_at: null, closed_at: null,
+      opened_at: null, closed_at: null,
     }).eq('id', ballot.id);
     setBusy(false);
     setShowReset(false); setResetInput(''); setShowShare(false);
     setQrDataUrl(''); setShowResults(false); setResults([]); setLiveCount(null);
-    setTtSpeakers([]); setVoterCount(''); setShowOpen(false);
+    setVoterCount(''); setShowOpen(false);
     onChanged();
   }
 
