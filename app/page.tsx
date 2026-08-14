@@ -6,13 +6,15 @@ import { MeetingCard } from '@/components/MeetingCard';
 import { MemberPicker } from '@/components/MemberPicker';
 import { MemberAdviceModal } from '@/components/MemberAdviceModal';
 import { SiteFooter } from '@/components/SiteFooter';
+import { InstagramFeed } from '@/components/InstagramFeed';
 import { isMeetingPast, getAdjacentMemberRoles } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
 
-type Tab = 'next' | 'upcoming' | 'past';
+type Tab = 'insta' | 'next' | 'upcoming' | 'past';
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'insta',    label: 'Instagram' },
   { id: 'next',     label: 'Upcoming Meeting' }, // label overridden dynamically below
   { id: 'upcoming', label: 'Future Meetings' },
   { id: 'past',     label: 'Past' },
@@ -72,13 +74,13 @@ export default function Home() {
   const nextBallotStatus = nextMeeting ? (ballots.get(nextMeeting.id)?.status ?? null) : null;
   const nextTabLabel = nextBallotStatus === 'open' ? 'Current Meeting' : 'Upcoming Meeting';
 
-  const tabContent: Record<Tab, typeof meetings> = {
+  const tabContent: Record<Exclude<Tab, 'insta'>, typeof meetings> = {
     next:     nextMeeting ? [nextMeeting] : [],
     upcoming: upcomingMeetings,
     past,
   };
 
-  const emptyState: Record<Tab, { text: string; cta?: string }> = {
+  const emptyState: Record<Exclude<Tab, 'insta'>, { text: string; cta?: string }> = {
     next:     { text: 'No upcoming meeting scheduled.', cta: 'Schedule one in Admin →' },
     upcoming: { text: 'No future meetings scheduled yet.', cta: 'Add meetings in Admin →' },
     past:     { text: 'No past meetings yet.' },
@@ -169,12 +171,14 @@ export default function Home() {
               <div key={i} className="bg-white/10 rounded-2xl h-64 animate-pulse" />
             ))}
           </div>
-        ) : tabContent[activeTab].length === 0 ? (
+        ) : activeTab === 'insta' ? (
+          <InstagramFeed />
+        ) : tabContent[activeTab as Exclude<Tab, 'insta'>].length === 0 ? (
           <div className="text-center py-16 space-y-2">
-            <p className="text-white/40">{emptyState[activeTab].text}</p>
-            {emptyState[activeTab].cta && (
+            <p className="text-white/40">{emptyState[activeTab as Exclude<Tab, 'insta'>].text}</p>
+            {emptyState[activeTab as Exclude<Tab, 'insta'>].cta && (
               <Link href="/amiadmin" className="text-sm text-yellow-200 inline-block">
-                {emptyState[activeTab].cta}
+                {emptyState[activeTab as Exclude<Tab, 'insta'>].cta}
               </Link>
             )}
           </div>
