@@ -138,6 +138,16 @@ export function RoleSlot({
     ? `TM ${claim.member.display_name}`
     : claim?.member?.name ?? '…';
 
+  if (claim && roleKey === 'speaker') {
+    console.log('[RoleSlot Speaker Claim]', {
+      meetingId,
+      slotIndex,
+      claimantName,
+      approval_status: claim.approval_status,
+      isAdmin,
+    });
+  }
+
   // ── Read-only (past or locked) — admin keeps edit control to fix
   //    role players post-hoc, e.g. re-adding a disqualified speaker. ──────────
   if ((isPast || isLocked) && !isAdmin) {
