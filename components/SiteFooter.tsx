@@ -67,23 +67,23 @@ export function SiteFooter() {
         </div>
 
         {/* Resources & Brand */}
-        <div className="border-t border-white/10 pt-5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/ti-logo-white.svg"
-              alt="Toastmasters International Logo"
-              width={110}
-              height={28}
-              className="h-7 w-auto opacity-55"
-            />
-          </div>
+        <div className="border-t border-white/10 pt-5 flex justify-center">
           <a
             href="https://www.toastmasters.org/resources"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-white/50 hover:text-yellow-200 transition-colors font-medium flex items-center gap-1"
+            className="flex items-center gap-3 group px-4 py-2 rounded-xl hover:bg-white/5 transition-all duration-200"
           >
-            Resources ↗
+            <Image
+              src="/ti-wordmark-color.jpg"
+              alt="Toastmasters International Logo"
+              width={140}
+              height={36}
+              className="h-8 w-auto object-contain rounded"
+            />
+            <span className="text-xs text-white/50 group-hover:text-yellow-200 transition-colors font-medium">
+              Resources ↗
+            </span>
           </a>
         </div>
 
