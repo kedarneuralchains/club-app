@@ -347,7 +347,7 @@ function AdminPanel() {
               <Image src="/logo.png" alt="Toastmasters International" width={100} height={24} className="h-6 w-auto" priority />
             </div>
             <p className="text-[10px] font-bold text-white leading-tight w-full truncate">Dehradun WIC India Toastmasters Club</p>
-            <p className="text-[8px] text-white/55 leading-none w-full truncate">No. 03295206 · Area 03 · Division I · District 41</p>
+            <p className="text-[8px] text-white/55 leading-none w-full truncate">No. 03295206 · Area 03 · Division B · District 41</p>
           </Link>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs font-semibold text-yellow-200 bg-white/10 px-2.5 py-1 rounded-full">Admin</span>
