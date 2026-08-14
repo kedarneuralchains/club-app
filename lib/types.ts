@@ -68,6 +68,7 @@ export interface RoleClaim {
   member_id: string;
   claimed_at: string;
   admin_override: boolean;
+  approval_status?: 'pending' | 'approved';
   // Speaker-only fields (Pathways speech details)
   path: string | null;
   speech_level: number | null;

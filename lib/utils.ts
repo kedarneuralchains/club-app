@@ -135,7 +135,12 @@ export function buildWhatsAppAgenda(
     );
     if (!claim) return '';
     const m = membersById.get(claim.member_id);
-    return m ? `TM ${m.display_name}` : '';
+    let name = m ? `TM ${m.display_name}` : '';
+    if (name && claim.role_key === 'speaker') {
+      const isPending = claim.approval_status === 'pending';
+      name += isPending ? ' (VPEd review)' : ' (VPEd approved)';
+    }
+    return name;
   };
 
   const lines: string[] = [];

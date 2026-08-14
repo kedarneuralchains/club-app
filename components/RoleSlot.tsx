@@ -50,14 +50,103 @@ export function RoleSlot({
 
   async function handleClaim() {
     if (!memberId || !canClaim || busy) return;
+
+    // Rate Limiting (localStorage): max 3 speaker claims per 24 hours
+    if (isSpeaker && !isAdmin) {
+      try {
+        const historyStr = localStorage.getItem('tm_speaker_claims_history') || '[]';
+        const history = JSON.parse(historyStr) as number[];
+        const now = Date.now();
+        const oneDayAgo = now - 24 * 60 * 60 * 1000;
+        
+        // Filter history to last 24 hours
+        const recentClaims = history.filter(t => t > oneDayAgo);
+        if (recentClaims.length >= 3) {
+          alert('Rate limit exceeded. You can only request up to 3 speaker slots per day. Please contact VP Education.');
+          return;
+        }
+        
+        // Add current time and save
+        recentClaims.push(now);
+        localStorage.setItem('tm_speaker_claims_history', JSON.stringify(recentClaims));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     setBusy(true);
-    await supabase.from('role_claims').insert({
+
+    // Backend Check: Max 1 active speaker slot (pending/approved) across all future meetings
+    if (isSpeaker && !isAdmin) {
+      try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        // Fetch future meetings
+        const { data: futureMeetings } = await supabase
+          .from('meetings')
+          .select('id')
+          .gte('date', todayStr);
+
+        if (futureMeetings && futureMeetings.length > 0) {
+          const futureMtgIds = futureMeetings.map(m => m.id);
+          const { data: existingClaims } = await supabase
+            .from('role_claims')
+            .select('id')
+            .eq('member_id', memberId)
+            .eq('role_key', 'speaker')
+            .in('meeting_id', futureMtgIds);
+
+          if (existingClaims && existingClaims.length > 0) {
+            alert('You already have a speaker slot booked or pending review for an upcoming meeting. You can only hold one speaker slot at a time.');
+            setBusy(false);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    const { error } = await supabase.from('role_claims').insert({
       meeting_id: meetingId,
       role_key: roleKey,
       slot_index: slotIndex,
       member_id: memberId,
       admin_override: isMultiRole,
+      approval_status: isSpeaker ? 'pending' : 'approved',
     });
+
+    if (error) {
+      console.error(error);
+      setBusy(false);
+      return;
+    }
+
+    // Trigger email notification
+    if (isSpeaker) {
+      try {
+        const speakerName = allMembers.find(m => m.id === memberId)?.name || 'Unknown Member';
+        const { data: mtg } = await supabase
+          .from('meetings')
+          .select('number, date')
+          .eq('id', meetingId)
+          .single();
+
+        if (mtg) {
+          await fetch('/api/notify-vped', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              speakerName,
+              meetingNumber: mtg.number,
+              date: mtg.date,
+            }),
+          });
+        }
+      } catch (err) {
+        console.error('Notification failed:', err);
+      }
+    }
+
     setBusy(false);
     onChanged();
   }
@@ -66,6 +155,17 @@ export function RoleSlot({
     if (!claim || !canRelease || busy) return;
     setBusy(true);
     await supabase.from('role_claims').delete().eq('id', claim.id);
+    setBusy(false);
+    onChanged();
+  }
+
+  async function handleApprove() {
+    if (!claim || busy) return;
+    setBusy(true);
+    await supabase
+      .from('role_claims')
+      .update({ approval_status: 'approved' })
+      .eq('id', claim.id);
     setBusy(false);
     onChanged();
   }
@@ -79,6 +179,7 @@ export function RoleSlot({
       slot_index: slotIndex,
       member_id: selectedId,
       admin_override: true,
+      approval_status: 'approved',
     });
     setBusy(false);
     setAssigning(false);
@@ -92,14 +193,26 @@ export function RoleSlot({
   // ── Read-only (past or locked) — admin keeps edit control to fix
   //    role players post-hoc, e.g. re-adding a disqualified speaker. ──────────
   if ((isPast || isLocked) && !isAdmin) {
+    const isPending = claim?.approval_status === 'pending';
     return (
       <>
         <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-stone-50">
           <span className="text-base shrink-0">{meta.emoji}</span>
           <span className="text-sm text-stone-500 font-medium shrink-0">{meta.label}</span>
-          <span className="text-sm text-stone-800 ml-auto truncate max-w-[160px]">
-            {claim ? claimantName : <span className="text-stone-300">—</span>}
-          </span>
+          <div className="ml-auto flex items-center gap-1.5 min-w-0">
+            <span className="text-sm text-stone-800 truncate max-w-[120px] sm:max-w-[160px]">
+              {claim ? claimantName : <span className="text-stone-300">—</span>}
+            </span>
+            {claim && isSpeaker && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold border shrink-0
+                ${isPending
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-green-50 text-green-700 border-green-200'}`}
+              >
+                {isPending ? 'VPEd review' : 'VPEd approved'}
+              </span>
+            )}
+          </div>
         </div>
         {claim && isSpeaker && (
           <SpeechDetailsBlock claim={claim} canEdit={false} onChanged={onChanged} />
@@ -110,27 +223,59 @@ export function RoleSlot({
 
   // ── Slot filled ───────────────────────────────────────────────────────────
   if (claim) {
+    const isPending = claim.approval_status === 'pending';
     return (
       <>
-        <div className={`flex items-center gap-2 py-2.5 px-3 rounded-xl transition-colors
+        <div className={`flex items-center gap-2 py-2.5 px-3 rounded-xl transition-all
           ${isOwn ? 'bg-maroon-50 border border-maroon-200' : 'bg-stone-50'}`}
         >
           <span className="text-base shrink-0">{meta.emoji}</span>
           <span className="text-sm text-stone-500 font-medium shrink-0">{meta.label}</span>
-          <span className={`text-sm font-semibold ml-auto truncate max-w-[140px] ${isOwn ? 'text-maroon-700' : 'text-stone-800'}`}>
-            {claimantName}
-            {isOwn && <span className="text-xs font-normal text-maroon-400 ml-1">(you)</span>}
-          </span>
-          {canRelease && (
-            <button
-              onClick={handleRelease}
-              disabled={busy}
-              className="shrink-0 ml-1 text-xs text-stone-400 hover:text-red-500 tap-target
-                         px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
-              aria-label={`Release ${meta.label}`}
-            >
-              {busy ? '…' : '✕'}
-            </button>
+          <div className="ml-auto flex items-center gap-1.5 min-w-0">
+            <span className={`text-sm font-semibold truncate max-w-[120px] sm:max-w-[160px] ${isOwn ? 'text-maroon-700' : 'text-stone-800'}`}>
+              {claimantName}
+              {isOwn && <span className="text-xs font-normal text-maroon-400 ml-1">(you)</span>}
+            </span>
+            {isSpeaker && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold border shrink-0
+                ${isPending
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-green-50 text-green-700 border-green-200'}`}
+              >
+                {isPending ? 'VPEd review' : 'VPEd approved'}
+              </span>
+            )}
+          </div>
+
+          {isAdmin && isPending ? (
+            <div className="flex gap-1 shrink-0 ml-1">
+              <button
+                onClick={handleApprove}
+                disabled={busy}
+                className="text-[10px] bg-green-600 hover:bg-green-700 text-white font-bold px-2 py-1 rounded transition-colors"
+              >
+                Approve
+              </button>
+              <button
+                onClick={handleRelease}
+                disabled={busy}
+                className="text-[10px] bg-red-600 hover:bg-red-700 text-white font-bold px-2 py-1 rounded transition-colors"
+              >
+                Reject
+              </button>
+            </div>
+          ) : (
+            canRelease && (
+              <button
+                onClick={handleRelease}
+                disabled={busy}
+                className="shrink-0 ml-1 text-xs text-stone-400 hover:text-red-500 tap-target
+                           px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
+                aria-label={`Release ${meta.label}`}
+              >
+                {busy ? '…' : '✕'}
+              </button>
+            )
           )}
         </div>
         {isSpeaker && (

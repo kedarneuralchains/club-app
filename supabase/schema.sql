@@ -55,6 +55,8 @@ create table if not exists role_claims (
   -- Speech time allotment (minutes) for the dynamic agenda; null = level default
   speech_min_minutes integer check (speech_min_minutes between 1 and 60),
   speech_max_minutes integer check (speech_max_minutes between 1 and 60),
+  approval_status    text not null default 'approved'
+                       check (approval_status in ('pending', 'approved')),
 
   constraint role_claims_slot_unique unique (meeting_id, role_key, slot_index)
 );

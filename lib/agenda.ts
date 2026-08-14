@@ -121,7 +121,12 @@ export function buildAgenda(
     const c = findClaim(roleKey, slot);
     if (!c) return null;
     const m = c.member ?? membersById.get(c.member_id);
-    return m ? `TM ${m.display_name}` : null;
+    let name = m ? `TM ${m.display_name}` : null;
+    if (name && c.role_key === 'speaker') {
+      const isPending = c.approval_status === 'pending';
+      name += isPending ? ' (VPEd review)' : ' (VPEd approved)';
+    }
+    return name;
   };
 
   // Caller prefix: short role label, with the member's name appended when known.

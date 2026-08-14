@@ -1,0 +1,53 @@
+import { NextResponse } from 'next/server';
+
+export async function POST(request: Request) {
+  try {
+    const { speakerName, meetingNumber, date } = await request.json();
+    
+    const vpedEmail = 'parastiwari013@gmail.com';
+    const resendKey = process.env.RESEND_API_KEY;
+
+    console.log(`[Notification] Speaker request: ${speakerName} for Meeting #${meetingNumber} on ${date}`);
+
+    if (!resendKey) {
+      console.warn('RESEND_API_KEY is not configured. Email notification skipped.');
+      return NextResponse.json({ success: true, message: 'Notification logged (email skipped due to missing API key).' });
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Toastmasters Club <onboarding@resend.dev>',
+        to: vpedEmail,
+        subject: `🚨 Speaker Request: TM ${speakerName} - Meeting #${meetingNumber}`,
+        html: `
+          <h3>Hello VP Education,</h3>
+          <p>A new speaker slot has been requested and is pending your review.</p>
+          <ul>
+            <li><strong>Speaker:</strong> TM ${speakerName}</li>
+            <li><strong>Meeting:</strong> #${meetingNumber}</li>
+            <li><strong>Date:</strong> ${date}</li>
+          </ul>
+          <p>Please open the <a href="https://dehraduntoastmasters.vercel.app/amiadmin">Admin Panel</a> to approve or reject this request.</p>
+          <br/>
+          <p>Best regards,<br/>Club Automation Bot</p>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error('Failed to send email via Resend:', err);
+      return NextResponse.json({ success: false, error: err }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error in notify-vped API route:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
