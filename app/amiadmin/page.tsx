@@ -230,6 +230,15 @@ function MemberRow({ member, onUpdated }: { member: Member; onUpdated: () => voi
     onUpdated();
   }
 
+  async function deleteMember() {
+    if (!confirm(`Are you sure you want to delete member "${member.name}"? This will clear all their past and upcoming role claims.`)) return;
+    setSaving(true);
+    await supabase.from('role_claims').delete().eq('member_id', member.id);
+    await supabase.from('members').delete().eq('id', member.id);
+    setSaving(false);
+    onUpdated();
+  }
+
   return (
     <div className={`flex items-center gap-3 py-2.5 px-3 rounded-xl border
       ${member.active ? 'border-stone-100 bg-white' : 'border-stone-100 bg-stone-50 opacity-60'}`}
@@ -256,15 +265,24 @@ function MemberRow({ member, onUpdated }: { member: Member; onUpdated: () => voi
           </p>
         )}
       </div>
-      <button
-        onClick={toggleActive}
-        className={`text-xs font-medium px-2 py-1 rounded-lg tap-target shrink-0
-          ${member.active
-            ? 'text-stone-400 hover:text-red-500 hover:bg-red-50'
-            : 'text-green-600 hover:bg-green-50'}`}
-      >
-        {member.active ? 'Deactivate' : 'Restore'}
-      </button>
+      <div className="flex gap-1 shrink-0">
+        <button
+          onClick={toggleActive}
+          className={`text-xs font-medium px-2 py-1 rounded-lg tap-target
+            ${member.active
+              ? 'text-stone-400 hover:text-stone-600 hover:bg-stone-100'
+              : 'text-green-600 hover:bg-green-50'}`}
+        >
+          {member.active ? 'Deactivate' : 'Restore'}
+        </button>
+        <button
+          onClick={deleteMember}
+          disabled={saving}
+          className="text-xs font-medium px-2 py-1 rounded-lg tap-target text-red-500 hover:bg-red-50 disabled:opacity-40"
+        >
+          Delete
+        </button>
+      </div>
     </div>
   );
 }
