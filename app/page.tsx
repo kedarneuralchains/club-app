@@ -6,14 +6,13 @@ import { MeetingCard } from '@/components/MeetingCard';
 import { MemberPicker } from '@/components/MemberPicker';
 import { MemberAdviceModal } from '@/components/MemberAdviceModal';
 import { SiteFooter } from '@/components/SiteFooter';
-import { InstagramFeed } from '@/components/InstagramFeed';
 import { isMeetingPast, getAdjacentMemberRoles } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
 
-type Tab = 'insta' | 'next' | 'upcoming' | 'past';
+type Tab = 'next' | 'upcoming' | 'past';
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: Tab | 'insta'; label: string }[] = [
   { id: 'insta',    label: 'Updates D224' },
   { id: 'next',     label: 'Upcoming Meeting' }, // label overridden dynamically below
   { id: 'upcoming', label: 'Future Meetings' },
@@ -74,13 +73,13 @@ export default function Home() {
   const nextBallotStatus = nextMeeting ? (ballots.get(nextMeeting.id)?.status ?? null) : null;
   const nextTabLabel = nextBallotStatus === 'open' ? 'Current Meeting' : 'Upcoming Meeting';
 
-  const tabContent: Record<Exclude<Tab, 'insta'>, typeof meetings> = {
+  const tabContent: Record<Tab, typeof meetings> = {
     next:     nextMeeting ? [nextMeeting] : [],
     upcoming: upcomingMeetings,
     past,
   };
 
-  const emptyState: Record<Exclude<Tab, 'insta'>, { text: string; cta?: string }> = {
+  const emptyState: Record<Tab, { text: string; cta?: string }> = {
     next:     { text: 'No upcoming meeting scheduled.', cta: 'Schedule one in Admin →' },
     upcoming: { text: 'No future meetings scheduled yet.', cta: 'Add meetings in Admin →' },
     past:     { text: 'No past meetings yet.' },
@@ -146,19 +145,38 @@ export default function Home() {
       <div className="sticky top-16 z-30 bg-navy-700 border-b border-white/5 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-2">
           <div className="flex gap-1 bg-white/10 rounded-xl p-1">
-            {TABS.map(({ id, label }) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={`flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all ${
-                  activeTab === id
-                    ? 'bg-white text-navy-700 shadow-sm'
-                    : 'text-white/60 hover:text-white'
-                }`}
-              >
-                {id === 'next' ? nextTabLabel : label}
-              </button>
-            ))}
+            {TABS.map(({ id, label }) => {
+              const isInsta = id === 'insta';
+              const labelText = id === 'next' ? nextTabLabel : label;
+
+              if (isInsta) {
+                return (
+                  <a
+                    key={id}
+                    href="https://www.instagram.com/d224toastmasters?igsh=MWMwb2QxNTczMHJlag=="
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 py-2.5 text-xs font-semibold rounded-lg text-white/60 hover:text-white transition-all text-center flex items-center justify-center gap-1"
+                  >
+                    {labelText} ↗
+                  </a>
+                );
+              }
+
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id as Tab)}
+                  className={`flex-1 py-2.5 text-xs font-semibold rounded-lg transition-all ${
+                    activeTab === id
+                      ? 'bg-white text-navy-700 shadow-sm'
+                      : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  {labelText}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -171,14 +189,12 @@ export default function Home() {
               <div key={i} className="bg-white/10 rounded-2xl h-64 animate-pulse" />
             ))}
           </div>
-        ) : activeTab === 'insta' ? (
-          <InstagramFeed />
-        ) : tabContent[activeTab as Exclude<Tab, 'insta'>].length === 0 ? (
+        ) : tabContent[activeTab].length === 0 ? (
           <div className="text-center py-16 space-y-2">
-            <p className="text-white/40">{emptyState[activeTab as Exclude<Tab, 'insta'>].text}</p>
-            {emptyState[activeTab as Exclude<Tab, 'insta'>].cta && (
+            <p className="text-white/40">{emptyState[activeTab].text}</p>
+            {emptyState[activeTab].cta && (
               <Link href="/amiadmin" className="text-sm text-yellow-200 inline-block">
-                {emptyState[activeTab as Exclude<Tab, 'insta'>].cta}
+                {emptyState[activeTab].cta}
               </Link>
             )}
           </div>
