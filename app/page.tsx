@@ -14,7 +14,7 @@ import Image from 'next/image';
 type Tab = 'insta' | 'next' | 'upcoming' | 'past';
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'insta',    label: 'Instagram' },
+  { id: 'insta',    label: 'Updates D224' },
   { id: 'next',     label: 'Upcoming Meeting' }, // label overridden dynamically below
   { id: 'upcoming', label: 'Future Meetings' },
   { id: 'past',     label: 'Past' },

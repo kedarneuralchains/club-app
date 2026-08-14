@@ -15,57 +15,57 @@ const INSTAGRAM_POSTS: InstagramPost[] = [
   {
     id: '1',
     image: '/instagram/post1.jpg',
-    caption: 'Congratulations to the winners of the Table Topics Speech Contest! 🏆 Your words inspired us all! #Toastmasters #PublicSpeaking #District224',
-    likes: 54,
-    comments: 8,
+    caption: 'DLC Nominees announced! 🗳️ Nominations for District 224 Leadership Team (2026-27) are out: Shwetank Sharma (District Director), Kashish Gupta (PQD), Khushal Lalwani (CGD), Bilvaa Desai, Navya Gupta, Abhishek Deoraj. All the best to our upcoming leaders! #D224 #Toastmasters',
+    likes: 68,
+    comments: 14,
     url: 'https://www.instagram.com/d224toastmasters?igsh=MWMwb2QxNTczMHJlag==',
   },
   {
     id: '2',
     image: '/instagram/post2.jpg',
-    caption: 'A memorable COTP (Club Officer Training Program) session. Empowering leaders to lead with confidence. 🌟 #Leadership #District224 #COTP',
-    likes: 72,
-    comments: 11,
+    caption: 'Article Writing Contest! ✍️ Submit your original articles on the theme \'Tabula Rasa\' to nirmikatoastmasters@gmail.com by 16th August 2026. Top 3 entries will be featured in the upcoming District 224 newsletter! #TabulaRasa #Newsletter #WritingContest',
+    likes: 42,
+    comments: 6,
     url: 'https://www.instagram.com/d224toastmasters?igsh=MWMwb2QxNTczMHJlag==',
   },
   {
     id: '3',
     image: '/instagram/post3.jpg',
-    caption: 'Meeting #505 of Dehradun WIC India Toastmasters Club! A power-packed meeting with amazing speeches. 🎤✨ #Toastmasters #Dehradun #PublicSpeaking',
-    likes: 89,
-    comments: 15,
+    caption: 'Moments of Truth 📊 A club\'s health check is vital! We invite all Club Officers to conduct \'Moments of Truth\' and submit the reports by 31st August 2026. Let\'s build stronger clubs together! #ClubQuality #MomentsOfTruth #District224',
+    likes: 57,
+    comments: 9,
     url: 'https://www.instagram.com/d224toastmasters?igsh=MWMwb2QxNTczMHJlag==',
   },
   {
     id: '4',
     image: '/instagram/post4.jpg',
-    caption: 'Best Evaluator, Best Speaker, and Best Table Topics speakers of the week! Keep shining! 🥇👏 #Success #Communication #Toastmasters',
-    likes: 63,
-    comments: 7,
+    caption: 'Toastmasters Leadership Program (TLI) 🎓 Mark your calendars for August 22, 2026 (10:00 AM - 1:00 PM). A district-wide training session on Zoom to help you lead with purpose. #TLI #LeadershipTraining #District224',
+    likes: 83,
+    comments: 11,
     url: 'https://www.instagram.com/d224toastmasters?igsh=MWMwb2QxNTczMHJlag==',
   },
   {
     id: '5',
     image: '/instagram/post5.jpg',
-    caption: 'Pathways Learning Experience: Take your public speaking to the next level. Which path are you on? 📚💡 #Pathways #SelfDevelopment #Toastmasters',
-    likes: 47,
-    comments: 4,
+    caption: 'PR Toolkit Launched! 🎨 VPEs, VPPRs, and Club Officers: Access our new PR Corner! Grab pre-designed Canva templates, customized zoom backgrounds, and official Toastmasters branding kits from district224.org. #PRToolkit #Branding #PublicRelations',
+    likes: 71,
+    comments: 8,
     url: 'https://www.instagram.com/d224toastmasters?igsh=MWMwb2QxNTczMHJlag==',
   },
   {
     id: '6',
     image: '/instagram/post6.jpg',
-    caption: 'Frictionless meeting bookings are live! Check out our new mobile-friendly web app. Book your slot now! 📲💻 #Tech #Toastmasters #ClubApp',
-    likes: 112,
-    comments: 24,
+    caption: 'Welcome to all our guests! Toastmasters is a supportive environment where you can learn by doing. Join us this Saturday! 🤝❤️ #Networking #Learning #Toastmasters',
+    likes: 95,
+    comments: 19,
     url: 'https://www.instagram.com/d224toastmasters?igsh=MWMwb2QxNTczMHJlag==',
   },
   {
     id: '7',
     image: '/instagram/post7.jpg',
-    caption: 'Welcome to all our guests! Toastmasters is a supportive environment where you can learn by doing. Join us this Saturday! 🤝❤️ #Networking #Learning #Toastmasters',
-    likes: 95,
-    comments: 19,
+    caption: 'Meeting #505 of Dehradun WIC India Toastmasters Club! A power-packed meeting with amazing speeches. 🎤✨ #Toastmasters #Dehradun #PublicSpeaking',
+    likes: 89,
+    comments: 15,
     url: 'https://www.instagram.com/d224toastmasters?igsh=MWMwb2QxNTczMHJlag==',
   },
 ];
@@ -85,7 +85,7 @@ export function InstagramFeed() {
             href={profileUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="relative p-1 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 hover:scale-105 transition-transform duration-300 animate-gradient"
+            className="relative p-1 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 hover:scale-105 transition-transform duration-300"
           >
             <div className="bg-navy-700 rounded-full p-1">
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-white">
@@ -118,28 +118,28 @@ export function InstagramFeed() {
             {/* Stats */}
             <div className="flex justify-center sm:justify-start gap-8 text-sm">
               <div>
-                <span className="font-bold text-white">7</span> posts
+                <span className="font-bold text-white">1,730</span> posts
               </div>
               <div>
-                <span className="font-bold text-white">1,250</span> followers
+                <span className="font-bold text-white">1,534</span> followers
               </div>
               <div>
-                <span className="font-bold text-white">145</span> following
+                <span className="font-bold text-white">43</span> following
               </div>
             </div>
 
             {/* Bio */}
             <div className="text-sm space-y-1">
-              <p className="font-bold text-white">District 224 Toastmasters</p>
+              <p className="font-bold text-white">District 224 Toastmasters International</p>
               <p className="text-white/80">🗣️ Communication &amp; Leadership Development</p>
-              <p className="text-white/80">📍 Serving 200+ clubs in North &amp; West India</p>
+              <p className="text-white/80">📍 Serving 150+ active clubs across North &amp; West India</p>
               <a
-                href="https://district224.toastmasters.org"
+                href="https://d224toastmasters.org"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-yellow-200 hover:underline font-semibold block mt-1"
               >
-                district224.toastmasters.org
+                d224toastmasters.org
               </a>
             </div>
           </div>
