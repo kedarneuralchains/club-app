@@ -241,3 +241,18 @@ $$;
 alter publication supabase_realtime add table role_claims;
 alter publication supabase_realtime add table ballots;
 alter publication supabase_realtime add table votes;
+
+-- ============================================================
+-- Settings Table
+-- ============================================================
+
+create table if not exists settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table settings enable row level security;
+create policy "public read settings" on settings for select using (true);
+create policy "public write settings" on settings for insert with check (true);
+create policy "public update settings" on settings for update using (true);

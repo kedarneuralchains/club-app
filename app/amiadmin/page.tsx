@@ -279,7 +279,7 @@ function AdminPanel() {
   const [guestRegs, setGuestRegs] = useState<GuestRegistration[]>([]);
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'meetings' | 'members' | 'guests' | 'announce'>('meetings');
+  const [tab, setTab] = useState<'meetings' | 'members' | 'guests' | 'announce' | 'settings'>('meetings');
   const [showNewMeeting, setShowNewMeeting] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState<MeetingWithClaims | null>(null);
   const [memberFilter, setMemberFilter] = useState<'active' | 'all'>('active');
@@ -366,6 +366,7 @@ function AdminPanel() {
             { id: 'members', label: 'Members' },
             { id: 'guests', label: 'Guests' },
             { id: 'announce', label: 'Announce' },
+            { id: 'settings', label: 'Settings' },
           ] as const).map(({ id, label }) => (
             <button
               key={id}
@@ -386,6 +387,8 @@ function AdminPanel() {
           <GuestLog guestRegs={guestRegs} meetings={meetings} />
         ) : tab === 'announce' ? (
           <AnnouncementPanel current={currentAnnouncement} onChanged={fetchAll} />
+        ) : tab === 'settings' ? (
+          <SettingsPanel />
         ) : tab === 'meetings' ? (
           <div className="space-y-4 pb-8">
             {!showNewMeeting && !editingMeeting && (
@@ -1048,6 +1051,111 @@ function AddMemberForm({ onAdd }: { onAdd: (name: string) => void }) {
         Add
       </button>
     </form>
+  );
+}
+
+// ─── Settings Panel ───────────────────────────────────────────────────────────
+
+function SettingsPanel() {
+  const supabase = createClient();
+  const [vpedEmail, setVpedEmail] = useState('');
+  const [resendApiKey, setResendApiKey] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    async function loadSettings() {
+      const { data } = await supabase.from('settings').select('*');
+      if (data) {
+        const vped = data.find(s => s.key === 'vped_email')?.value || '';
+        const key = data.find(s => s.key === 'resend_api_key')?.value || '';
+        setVpedEmail(vped);
+        setResendApiKey(key);
+      }
+      setLoading(false);
+    }
+    loadSettings();
+  }, [supabase]);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setMessage('');
+    try {
+      await Promise.all([
+        supabase.from('settings').upsert({ key: 'vped_email', value: vpedEmail.trim() }),
+        supabase.from('settings').upsert({ key: 'resend_api_key', value: resendApiKey.trim() }),
+      ]);
+      setMessage('Settings saved successfully!');
+    } catch (err: any) {
+      console.error(err);
+      setMessage('Failed to save settings: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="text-white/60 text-sm py-4">Loading settings...</div>;
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+      <h3 className="font-serif text-lg font-bold text-stone-900">VPEd & Email Settings</h3>
+      <p className="text-xs text-stone-500">
+        Configure the destination email for speaker claim notifications and set up Resend API credentials.
+      </p>
+
+      {message && (
+        <div className={`p-3 rounded-xl text-xs font-semibold ${message.includes('failed') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+          {message}
+        </div>
+      )}
+
+      <form onSubmit={save} className="space-y-4">
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+            VPED Email Address
+          </label>
+          <input
+            type="email"
+            value={vpedEmail}
+            onChange={(e) => setVpedEmail(e.target.value)}
+            placeholder="vped@example.com"
+            required
+            className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-maroon-700 text-stone-800"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">
+            Resend API Key (Optional)
+          </label>
+          <input
+            type="password"
+            value={resendApiKey}
+            onChange={(e) => setResendApiKey(e.target.value)}
+            placeholder="re_..."
+            className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-maroon-700 text-stone-800"
+          />
+          <p className="text-[10px] text-stone-400 mt-1">
+            If left blank, the app will fall back to the <code>RESEND_API_KEY</code> environment variable configured on your server (Vercel).
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full bg-maroon-700 hover:bg-maroon-800 text-white rounded-xl py-2.5 text-sm font-semibold
+                     disabled:opacity-40 tap-target active:scale-[0.98] transition-all"
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
+      </form>
+    </div>
   );
 }
 

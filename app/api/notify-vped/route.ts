@@ -1,16 +1,32 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: Request) {
   try {
     const { speakerName, meetingNumber, date } = await request.json();
-    
-    const vpedEmail = 'parastiwari013@gmail.com';
-    const resendKey = process.env.RESEND_API_KEY;
+
+    // Create Supabase client using service role key if available
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+    );
+
+    // Fetch configurations from settings table
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('key, value');
+
+    const settingsMap = new Map((settingsData || []).map(s => [s.key, s.value]));
+
+    const vpedEmail = settingsMap.get('vped_email') || 'parastiwari013@gmail.com';
+    const dbResendKey = settingsMap.get('resend_api_key');
+    const resendKey = dbResendKey || process.env.RESEND_API_KEY;
 
     console.log(`[Notification] Speaker request: ${speakerName} for Meeting #${meetingNumber} on ${date}`);
+    console.log(`[Notification] Sending to VPED at ${vpedEmail}`);
 
     if (!resendKey) {
-      console.warn('RESEND_API_KEY is not configured. Email notification skipped.');
+      console.warn('Resend API key is not configured in settings or environment. Email notification skipped.');
       return NextResponse.json({ success: true, message: 'Notification logged (email skipped due to missing API key).' });
     }
 
