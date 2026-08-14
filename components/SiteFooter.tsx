@@ -66,24 +66,24 @@ export function SiteFooter() {
           </div>
         </div>
 
-        {/* Attribution */}
-        <div className="border-t border-white/10 pt-5">
+        {/* Resources & Brand */}
+        <div className="border-t border-white/10 pt-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Image
+              src="/ti-logo-white.svg"
+              alt="Toastmasters International Logo"
+              width={110}
+              height={28}
+              className="h-7 w-auto opacity-55"
+            />
+          </div>
           <a
-            href="https://kedarneuralchains.com"
+            href="https://www.toastmasters.org/resources"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 group"
+            className="text-xs text-white/50 hover:text-yellow-200 transition-colors font-medium flex items-center gap-1"
           >
-            <span className="text-xs text-white/30 group-hover:text-white/50 transition-colors">
-              ♥ made in dehradun by
-            </span>
-            <Image
-              src="/knc-logo.png"
-              alt="Kedar Neural Chains"
-              width={80}
-              height={24}
-              className="h-5 w-auto opacity-30 group-hover:opacity-60 transition-opacity"
-            />
+            Resources ↗
           </a>
         </div>
 
