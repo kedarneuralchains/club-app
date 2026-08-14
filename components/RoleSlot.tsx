@@ -51,60 +51,7 @@ export function RoleSlot({
   async function handleClaim() {
     if (!memberId || !canClaim || busy) return;
 
-    // Rate Limiting (localStorage): max 3 speaker claims per 24 hours
-    if (isSpeaker && !isAdmin) {
-      try {
-        const historyStr = localStorage.getItem('tm_speaker_claims_history') || '[]';
-        const history = JSON.parse(historyStr) as number[];
-        const now = Date.now();
-        const oneDayAgo = now - 24 * 60 * 60 * 1000;
-        
-        // Filter history to last 24 hours
-        const recentClaims = history.filter(t => t > oneDayAgo);
-        if (recentClaims.length >= 3) {
-          alert('Rate limit exceeded. You can only request up to 3 speaker slots per day. Please contact VP Education.');
-          return;
-        }
-        
-        // Add current time and save
-        recentClaims.push(now);
-        localStorage.setItem('tm_speaker_claims_history', JSON.stringify(recentClaims));
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
     setBusy(true);
-
-    // Backend Check: Max 1 active speaker slot (pending/approved) across all future meetings
-    if (isSpeaker && !isAdmin) {
-      try {
-        const todayStr = new Date().toISOString().split('T')[0];
-        // Fetch future meetings
-        const { data: futureMeetings } = await supabase
-          .from('meetings')
-          .select('id')
-          .gte('date', todayStr);
-
-        if (futureMeetings && futureMeetings.length > 0) {
-          const futureMtgIds = futureMeetings.map(m => m.id);
-          const { data: existingClaims } = await supabase
-            .from('role_claims')
-            .select('id')
-            .eq('member_id', memberId)
-            .eq('role_key', 'speaker')
-            .in('meeting_id', futureMtgIds);
-
-          if (existingClaims && existingClaims.length > 0) {
-            alert('You already have a speaker slot booked or pending review for an upcoming meeting. You can only hold one speaker slot at a time.');
-            setBusy(false);
-            return;
-          }
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
 
     const { error } = await supabase.from('role_claims').insert({
       meeting_id: meetingId,
