@@ -19,7 +19,7 @@ export function useMeetings() {
         .select('*, role_claims(*, member:members(*))')
         .order('number', { ascending: false })
         .limit(20),
-      supabase.from('members').select('*').eq('active', true).order('name'),
+      supabase.from('members').select('*').eq('active', true).eq('deleted', false).order('name'),
       supabase.from('ballots').select('*'),
       supabase
         .from('announcements')

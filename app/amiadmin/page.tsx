@@ -231,10 +231,32 @@ function MemberRow({ member, onUpdated }: { member: Member; onUpdated: () => voi
   }
 
   async function deleteMember() {
-    if (!confirm(`Are you sure you want to delete member "${member.name}"? This will clear all their past and upcoming role claims.`)) return;
+    if (!confirm(`Are you sure you want to delete member "${member.name}"? This will remove them from the roster but preserve their past role claims.`)) return;
     setSaving(true);
-    await supabase.from('role_claims').delete().eq('member_id', member.id);
-    await supabase.from('members').delete().eq('id', member.id);
+    
+    // Clear only their FUTURE claims to free up upcoming slots
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const { data: futureMeetings } = await supabase
+        .from('meetings')
+        .select('id')
+        .gte('date', todayStr);
+
+      if (futureMeetings && futureMeetings.length > 0) {
+        const futureMtgIds = futureMeetings.map(m => m.id);
+        await supabase
+          .from('role_claims')
+          .delete()
+          .eq('member_id', member.id)
+          .in('meeting_id', futureMtgIds);
+      }
+    } catch (e) {
+      console.error('Error clearing future claims:', e);
+    }
+
+    // Soft delete member
+    await supabase.from('members').update({ deleted: true, active: false }).eq('id', member.id);
+    
     setSaving(false);
     onUpdated();
   }
@@ -309,7 +331,7 @@ function AdminPanel() {
         .select('*, role_claims(*, member:members(*))')
         .order('number', { ascending: false })
         .limit(10),
-      supabase.from('members').select('*').order('name'),
+      supabase.from('members').select('*').eq('deleted', false).order('name'),
       supabase.from('ballots').select('*'),
       supabase.from('guest_registrations').select('*').order('created_at', { ascending: false }),
       supabase.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1),

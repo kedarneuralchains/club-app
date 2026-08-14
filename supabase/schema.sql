@@ -18,6 +18,7 @@ create table if not exists members (
   name            text not null,
   display_name    text not null,  -- first-name used in WhatsApp output, editable by admin
   active          boolean not null default true,
+  deleted         boolean not null default false,
   created_at      timestamptz not null default now()
 );
 
