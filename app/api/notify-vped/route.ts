@@ -48,7 +48,7 @@ export async function POST(request: Request) {
             <li><strong>Meeting:</strong> #${meetingNumber}</li>
             <li><strong>Date:</strong> ${date}</li>
           </ul>
-          <p>Please open the <a href="https://dehraduntoastmasters.vercel.app/amiadmin">Admin Panel</a> to approve or reject this request.</p>
+          <p>Please open the admin panel to approve or reject this request.</p>
           <br/>
           <p>Best regards,<br/>Club Automation Bot</p>
         `,
