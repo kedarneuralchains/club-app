@@ -38,7 +38,7 @@ Originally built for [Dehradun WIC India Toastmasters](https://www.toastmasters.
 Single Next.js app, single Supabase project.
 
 - **Public page (`/`)** — meeting list, role claiming, voting, guest signup. Anonymous RLS allows reads + scoped writes (role claims, votes, guests).
-- **Admin page (`/amiadmin`)** — password-gated UI for managing data. Uses the same anon key; trust comes from the unlisted URL + password.
+- **Admin page (`/amiadmin`)** — Supabase Auth login restricted to emails in the `admins` table; RLS enforces admin-only writes.
 - **Supabase Realtime** subscriptions push role-claim changes to all connected devices so the meeting card stays in sync.
 - **No server-side code** beyond Next.js' default request handling. Everything that needs elevated privileges (the one-time member import) runs locally with the service-role key.
 
@@ -100,7 +100,6 @@ cp .env.local.example .env.local
 | ------------------------------------- | -------- | ----------------------------------------------------------------------- |
 | `NEXT_PUBLIC_SUPABASE_URL`            | yes      | Your Supabase project URL                                               |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`| yes      | Supabase publishable (anon) key                                         |
-| `NEXT_PUBLIC_ADMIN_PASSWORD`          | yes      | Password for the `/amiadmin` page (see security note below)             |
 | `SUPABASE_SERVICE_ROLE_KEY`           | no       | Only needed to run the one-time member import script. **Never commit.** |
 
 ### 5. Run locally
@@ -154,16 +153,12 @@ Expected monthly cost: **₹0**. Larger leagues (1000+ members, multiple clubs s
 
 ## Security Model
 
-This app deliberately avoids per-user authentication so members can claim a role with one tap from a WhatsApp link. The trade-offs you should understand before forking:
+Members don't log in, so they can claim a role with one tap from a WhatsApp link. Admins do.
 
-- **The admin password is a `NEXT_PUBLIC_*` env var**, which means Next.js inlines it into the client JavaScript bundle. Anyone who opens DevTools can extract it. Treat the admin URL + password as a **soft barrier**, not a security boundary.
-- **RLS is permissive for the anon role** — anyone with the Supabase URL + publishable key can insert/update most tables. Anonymous voting and role booking rely on this.
+- **Admins sign in with Supabase Auth** (email + password) and must also be listed in the `admins` table. Create the user under *Authentication → Users*, then `insert into admins (email) values ('you@example.com');`. Signing up alone grants nothing.
+- **Admin-only writes are enforced by RLS** via the `is_admin()` function: meetings, members, ballots, announcements and settings. Guest contact details and settings (incl. the Resend key) are readable only by admins.
+- **Member-facing writes stay open to the anon role**: role claims, speech details, votes and guest registration. Anyone with the publishable key can still claim/release roles directly against the API.
 - **Vote secrecy is enforced at the database layer** — the `votes` table has no public `select` policy; results are exposed only via the `get_ballot_results` SECURITY DEFINER function which returns aggregates only.
-
-If your club needs harder guarantees, you'll want to:
-1. Replace `NEXT_PUBLIC_ADMIN_PASSWORD` with Supabase Auth + a server-side admin role check.
-2. Tighten RLS to require an authenticated role for writes.
-3. Move admin actions behind a Next.js Route Handler that calls Supabase with the service-role key.
 
 PRs welcome.
 
@@ -188,7 +183,7 @@ PRs welcome.
 ```
 app/
   page.tsx              — public meeting list, role claiming, voting
-  amiadmin/page.tsx     — admin UI (password-gated)
+  amiadmin/page.tsx     — admin UI (Supabase Auth + admins allowlist)
   layout.tsx            — fonts, metadata
   globals.css           — Tailwind + utility tweaks
 components/

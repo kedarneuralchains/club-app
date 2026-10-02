@@ -8,39 +8,42 @@ import { isMeetingPast } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
 
-const ADMIN_KEY = 'tm_admin';
-// Password is kept so the admin-only API routes (guest list, settings) can
-// re-verify it server-side.
-const ADMIN_PW_KEY = 'tm_admin_pw';
+// Legacy keys from the old client-side password gate — cleared on logout.
+const LEGACY_KEYS = ['tm_admin', 'tm_admin_pw'];
 
-async function adminApi<T>(path: string, body: Record<string, unknown> = {}): Promise<T | null> {
-  const res = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: localStorage.getItem(ADMIN_PW_KEY), ...body }),
-  });
-  if (!res.ok) {
-    console.error(`${path} failed:`, res.status, await res.text());
-    return null;
-  }
-  return res.json();
+// Admin = signed in with Supabase Auth AND email listed in the `admins`
+// table (checked by the is_admin() RPC; RLS uses the same function).
+async function checkIsAdmin(): Promise<boolean> {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return false;
+  const { data } = await supabase.rpc('is_admin');
+  return data === true;
 }
 
 // ─── Auth gate ────────────────────────────────────────────────────────────────
 
 function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
+  const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (pw === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
-      localStorage.setItem(ADMIN_KEY, '1');
-      localStorage.setItem(ADMIN_PW_KEY, pw);
-      onSuccess();
+    setBusy(true);
+    setErr(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pw });
+    if (error) {
+      setErr('Incorrect email or password.');
+    } else if (!(await checkIsAdmin())) {
+      await supabase.auth.signOut();
+      setErr('This account is not an admin.');
     } else {
-      setErr(true);
+      onSuccess();
     }
+    setBusy(false);
   }
 
   return (
@@ -50,15 +53,26 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
         <p className="text-stone-500 text-sm mb-6">Dehradun WIC India Toastmasters Club</p>
         <form onSubmit={submit} className="space-y-4">
           <input
+            type="email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setErr(null); }}
+            placeholder="Email"
+            autoComplete="username"
+            required
+            className="w-full border border-stone-200 rounded-xl px-4 py-3 text-base
+                       focus:outline-none focus:ring-2 focus:ring-maroon-700"
+          />
+          <input
             type="password"
             value={pw}
-            onChange={(e) => { setPw(e.target.value); setErr(false); }}
+            onChange={(e) => { setPw(e.target.value); setErr(null); }}
             placeholder="Password"
+            required
             autoComplete="current-password"
             className="w-full border border-stone-200 rounded-xl px-4 py-3 text-base
                        focus:outline-none focus:ring-2 focus:ring-maroon-700"
           />
-          {err && <p className="text-red-500 text-sm">Incorrect password.</p>}
+          {err && <p className="text-red-500 text-sm">{err}</p>}
           <button
             type="submit"
             className="w-full bg-maroon-700 text-white rounded-xl py-3.5 font-semibold
@@ -342,7 +356,7 @@ function AdminPanel() {
   const [memberFilter, setMemberFilter] = useState<'active' | 'all'>('active');
 
   const fetchAll = useCallback(async () => {
-    const [{ data: m }, { data: mb }, { data: bl }, gr, { data: ann }] = await Promise.all([
+    const [{ data: m }, { data: mb }, { data: bl }, { data: gr }, { data: ann }] = await Promise.all([
       supabase
         .from('meetings')
         .select('*, role_claims(*, member:members(*))')
@@ -350,13 +364,13 @@ function AdminPanel() {
         .limit(10),
       supabase.from('members').select('*').eq('deleted', false).order('name'),
       supabase.from('ballots').select('*'),
-      adminApi<{ guests: GuestRegistration[] }>('/api/admin/guests'),
+      supabase.from('guest_registrations').select('*').order('created_at', { ascending: false }),
       supabase.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1),
     ]);
     if (m) setMeetings(m as MeetingWithClaims[]);
     if (mb) setMembers(mb as Member[]);
     if (bl) setBallotsMap(new Map((bl as Ballot[]).map((b) => [b.meeting_id, b])));
-    if (gr) setGuestRegs(gr.guests);
+    if (gr) setGuestRegs(gr as GuestRegistration[]);
     setCurrentAnnouncement((ann as Announcement[] | null)?.[0] ?? null);
     setLoading(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -386,9 +400,9 @@ function AdminPanel() {
     fetchAll();
   }
 
-  function logout() {
-    localStorage.removeItem(ADMIN_KEY);
-    localStorage.removeItem(ADMIN_PW_KEY);
+  async function logout() {
+    await supabase.auth.signOut();
+    LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
     window.location.reload();
   }
 
@@ -1115,6 +1129,7 @@ function AddMemberForm({ onAdd }: { onAdd: (name: string) => void }) {
 // ─── Settings Panel ───────────────────────────────────────────────────────────
 
 function SettingsPanel() {
+  const supabase = createClient();
   const [vpedEmail, setVpedEmail] = useState('');
   const [resendApiKey, setResendApiKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -1123,10 +1138,10 @@ function SettingsPanel() {
 
   useEffect(() => {
     async function loadSettings() {
-      const res = await adminApi<{ settings: Record<string, string> }>('/api/admin/settings');
-      if (res) {
-        setVpedEmail(res.settings.vped_email || '');
-        setResendApiKey(res.settings.resend_api_key || '');
+      const { data } = await supabase.from('settings').select('key, value');
+      if (data) {
+        setVpedEmail(data.find(s => s.key === 'vped_email')?.value || '');
+        setResendApiKey(data.find(s => s.key === 'resend_api_key')?.value || '');
       }
       setLoading(false);
     }
@@ -1138,10 +1153,11 @@ function SettingsPanel() {
     setSaving(true);
     setMessage('');
     try {
-      const res = await adminApi('/api/admin/settings', {
-        values: { vped_email: vpedEmail, resend_api_key: resendApiKey },
-      });
-      if (!res) throw new Error('server rejected the request');
+      const { error } = await supabase.from('settings').upsert([
+        { key: 'vped_email', value: vpedEmail.trim() },
+        { key: 'resend_api_key', value: resendApiKey.trim() },
+      ]);
+      if (error) throw error;
       setMessage('Settings saved successfully!');
     } catch (err: any) {
       console.error(err);
@@ -1220,8 +1236,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Sessions from before the password was stored must log in again.
-    setAuthed(localStorage.getItem(ADMIN_KEY) === '1' && !!localStorage.getItem(ADMIN_PW_KEY));
+    checkIsAdmin().then(setAuthed);
   }, []);
 
   if (authed === null) return null; // SSR flash prevention
