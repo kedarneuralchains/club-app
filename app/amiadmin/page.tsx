@@ -1008,24 +1008,92 @@ function VotingControls({ meeting, ballot, allMembers, onChanged }: {
 
 // ─── Guest Log ────────────────────────────────────────────────────────────────
 
+// Guest records are deleted 6 months after registration by the
+// purge-old-guest-registrations pg_cron job (migration 017).
+const GUEST_RETENTION_MONTHS = 6;
+
+function guestDeletionDate(createdAt: string): Date {
+  const d = new Date(createdAt);
+  d.setMonth(d.getMonth() + GUEST_RETENTION_MONTHS);
+  return d;
+}
+
+const fmtDate = (d: Date) =>
+  d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+function exportGuestsCsv(guestRegs: GuestRegistration[], meetingMap: Map<string, MeetingWithClaims>) {
+  // Quote every cell; prefix formula-like values so Excel treats them as
+  // text. Plain numbers such as "+91 98765 43210" are left alone.
+  const cell = (v: string | number | null | undefined) => {
+    let t = v == null ? '' : String(v);
+    if (/^[=@\t\r]/.test(t) || (/^[+-]/.test(t) && !/^[+-][\d\s()-]*$/.test(t))) t = `'${t}`;
+    return `"${t.replace(/"/g, '""')}"`;
+  };
+  const header = ['Name', 'Phone', 'Email', 'Meeting', 'Registered on', 'Auto-deletes on', 'Terms accepted'];
+  const rows = guestRegs.map((g) => {
+    const meeting = g.meeting_id ? meetingMap.get(g.meeting_id) : undefined;
+    return [
+      g.name, g.phone, g.email,
+      meeting ? `#${meeting.number}` : '',
+      fmtDate(new Date(g.created_at)),
+      fmtDate(guestDeletionDate(g.created_at)),
+      g.terms_version ?? '',
+    ].map(cell).join(',');
+  });
+  // BOM so Excel opens UTF-8 names correctly.
+  const csv = '\uFEFF' + [header.map(cell).join(','), ...rows].join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `guests-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function GuestLog({ guestRegs, meetings }: { guestRegs: GuestRegistration[]; meetings: MeetingWithClaims[] }) {
   const meetingMap = new Map(meetings.map((m) => [m.id, m]));
+  const soon = Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+  const notice = (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+      <p className="text-xs text-amber-900 leading-relaxed">
+        <strong>Auto-deletion (DPDP Act, 2023):</strong> guest details are deleted automatically{' '}
+        {GUEST_RETENTION_MONTHS} months after registration, as promised to guests in the{' '}
+        <a href="/terms" target="_blank" className="underline">Terms &amp; Privacy</a>. Export the list if
+        the club needs a record — and keep any export private and delete it once it&apos;s no longer needed.
+      </p>
+    </div>
+  );
 
   if (guestRegs.length === 0) {
     return (
-      <div className="text-center py-16 text-white/30 text-sm">
-        No guests registered yet.
+      <div className="pb-8">
+        {notice}
+        <div className="text-center py-16 text-white/30 text-sm">
+          No guests registered yet.
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-2 pb-8">
-      <p className="text-xs text-white/40 mb-3">
-        {guestRegs.length} guest registration{guestRegs.length !== 1 ? 's' : ''}
-      </p>
+      {notice}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-white/40">
+          {guestRegs.length} guest registration{guestRegs.length !== 1 ? 's' : ''}
+        </p>
+        <button
+          onClick={() => exportGuestsCsv(guestRegs, meetingMap)}
+          className="text-xs font-semibold bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-full transition-colors"
+        >
+          ⬇ Export CSV
+        </button>
+      </div>
       {guestRegs.map((g) => {
         const meeting = g.meeting_id ? meetingMap.get(g.meeting_id) : undefined;
+        const deletes = guestDeletionDate(g.created_at);
+        const deletingSoon = deletes.getTime() < soon;
         return (
           <div key={g.id} className="bg-white rounded-xl p-3">
             <div className="flex items-start justify-between gap-2">
@@ -1038,10 +1106,9 @@ function GuestLog({ guestRegs, meetings }: { guestRegs: GuestRegistration[]; mee
                 {meeting && (
                   <p className="text-xs font-semibold text-maroon-700">Meeting #{meeting.number}</p>
                 )}
-                <p className="text-xs text-stone-400 mt-0.5">
-                  {new Date(g.created_at).toLocaleDateString('en-IN', {
-                    day: 'numeric', month: 'short', year: 'numeric',
-                  })}
+                <p className="text-xs text-stone-400 mt-0.5">{fmtDate(new Date(g.created_at))}</p>
+                <p className={`text-[10px] mt-0.5 ${deletingSoon ? 'text-amber-600 font-semibold' : 'text-stone-300'}`}>
+                  Deletes {fmtDate(deletes)}
                 </p>
               </div>
             </div>
