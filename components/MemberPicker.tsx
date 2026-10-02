@@ -33,7 +33,7 @@ function TermsCheckbox({ checked, onChange }: { checked: boolean; onChange: (v: 
   );
 }
 
-function PinInput({ value, onChange, placeholder, autoFocus }: {
+export function PinInput({ value, onChange, placeholder, autoFocus }: {
   value: string; onChange: (v: string) => void; placeholder: string; autoFocus?: boolean;
 }) {
   return (

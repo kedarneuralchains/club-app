@@ -4,6 +4,7 @@ import { useMeetings } from '@/hooks/useMeetings';
 import { useIdentity } from '@/hooks/useIdentity';
 import { MeetingCard } from '@/components/MeetingCard';
 import { MemberPicker } from '@/components/MemberPicker';
+import { ChangePinModal } from '@/components/ChangePinModal';
 import { MemberAdviceModal } from '@/components/MemberAdviceModal';
 import { SiteFooter } from '@/components/SiteFooter';
 import { isMeetingPast, getAdjacentMemberRoles } from '@/lib/utils';
@@ -28,6 +29,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('next');
   const [announceDismissed, setAnnounceDismissed] = useState(true);
   const [showAdvice, setShowAdvice] = useState(false);
+  const [showChangePin, setShowChangePin] = useState(false);
 
   // Sync dismiss state when announcement changes (e.g. new one posted via realtime)
   useEffect(() => {
@@ -106,9 +108,14 @@ export default function Home() {
           {/* Right: identity controls */}
           <div className="flex items-center gap-1.5 shrink-0">
             {currentMember && (
-              <span className="text-xs font-semibold text-yellow-200 truncate max-w-[80px]">
-                {currentMember.display_name}
-              </span>
+              <button
+                onClick={() => token && setShowChangePin(true)}
+                title="Change PIN"
+                className="text-xs font-semibold text-yellow-200 truncate max-w-[96px] tap-target px-1 py-1
+                           underline decoration-dotted decoration-yellow-200/50 underline-offset-4"
+              >
+                {currentMember.display_name} 🔑
+              </button>
             )}
             {isGuest && (
               <span className="text-xs text-white/40 truncate max-w-[60px]">Guest</span>
@@ -232,6 +239,10 @@ export default function Home() {
           onSelect={handleSelect}
           onGuest={handleGuest}
         />
+      )}
+
+      {showChangePin && token && (
+        <ChangePinModal token={token} onClose={() => setShowChangePin(false)} />
       )}
 
       {/* Rotation-advice modal for members */}
