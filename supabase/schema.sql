@@ -135,7 +135,7 @@ create policy "public read members"             on members             for selec
 create policy "public read meetings"            on meetings            for select using (true);
 create policy "public read role_claims"         on role_claims         for select using (true);
 create policy "public read ballots"             on ballots             for select using (true);
-create policy "public read guest_registrations" on guest_registrations for select using (true);
+-- guest_registrations: no anon read — guest phone/email is admin-only via /api/admin/guests
 create policy "public read announcements"       on announcements       for select using (true);
 -- Note: no select policy on votes — privacy enforced at DB level.
 -- Results exposed only via the get_ballot_results SECURITY DEFINER function.
@@ -254,6 +254,4 @@ create table if not exists settings (
 );
 
 alter table settings enable row level security;
-create policy "public read settings" on settings for select using (true);
-create policy "public write settings" on settings for insert with check (true);
-create policy "public update settings" on settings for update using (true);
+-- No anon policies: settings hold secrets (Resend key); admin uses /api/admin/settings
