@@ -156,9 +156,9 @@ export function RoleSlot({
       <>
         <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-stone-50">
           <span className="text-base shrink-0">{meta.emoji}</span>
-          <span className="text-sm text-stone-500 font-medium shrink-0">{meta.label}</span>
+          <span className="text-sm text-stone-500 font-medium flex-1 min-w-0 truncate">{meta.label}</span>
           <div className="ml-auto flex items-center gap-1.5 min-w-0">
-            <span className="text-sm text-stone-800 truncate max-w-[120px] sm:max-w-[160px]">
+            <span className="text-sm text-stone-800 truncate">
               {claim ? claimantName : <span className="text-stone-300">—</span>}
             </span>
             {claim && isSpeaker && (
@@ -167,7 +167,8 @@ export function RoleSlot({
                   ? 'bg-amber-50 text-amber-700 border-amber-200'
                   : 'bg-green-50 text-green-700 border-green-200'}`}
               >
-                {isPending ? 'VPEd review' : 'VPEd approved'}
+                <span className="sm:hidden" title={isPending ? 'VPEd review' : 'VPEd approved'}>{isPending ? '⏳' : '✓'}</span>
+                <span className="hidden sm:inline">{isPending ? 'VPEd review' : 'VPEd approved'}</span>
               </span>
             )}
           </div>
@@ -188,9 +189,9 @@ export function RoleSlot({
           ${isOwn ? 'bg-maroon-50 border border-maroon-200' : 'bg-stone-50'}`}
         >
           <span className="text-base shrink-0">{meta.emoji}</span>
-          <span className="text-sm text-stone-500 font-medium shrink-0">{meta.label}</span>
+          <span className="text-sm text-stone-500 font-medium flex-1 min-w-0 truncate">{meta.label}</span>
           <div className="ml-auto flex items-center gap-1.5 min-w-0">
-            <span className={`text-sm font-semibold truncate max-w-[120px] sm:max-w-[160px] ${isOwn ? 'text-maroon-700' : 'text-stone-800'}`}>
+            <span className={`text-sm font-semibold truncate ${isOwn ? 'text-maroon-700' : 'text-stone-800'}`}>
               {claimantName}
               {isOwn && <span className="text-xs font-normal text-maroon-400 ml-1">(you)</span>}
             </span>
@@ -200,7 +201,8 @@ export function RoleSlot({
                   ? 'bg-amber-50 text-amber-700 border-amber-200'
                   : 'bg-green-50 text-green-700 border-green-200'}`}
               >
-                {isPending ? 'VPEd review' : 'VPEd approved'}
+                <span className="sm:hidden" title={isPending ? 'VPEd review' : 'VPEd approved'}>{isPending ? '⏳' : '✓'}</span>
+                <span className="hidden sm:inline">{isPending ? 'VPEd review' : 'VPEd approved'}</span>
               </span>
             )}
           </div>

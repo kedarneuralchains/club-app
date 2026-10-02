@@ -53,7 +53,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
       {/* Header */}
       <div className={`px-4 pt-4 pb-3 border-b ${past ? 'bg-stone-50 border-stone-100' : 'bg-white border-stone-100'}`}>
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-serif text-lg font-bold text-stone-900">
                 Meeting #{meeting.number}
@@ -101,10 +101,13 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
             )}
             <button
               onClick={() => setShowAgenda(true)}
-              className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs px-3 py-1.5
+              aria-label="Agenda"
+              title="Agenda"
+              className="flex items-center justify-center h-10 w-10 sm:h-auto sm:w-auto sm:px-3 sm:py-1.5
+                         bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs
                          rounded-full transition-colors shadow-sm shrink-0"
             >
-              📋 Agenda
+              📋<span className="hidden sm:inline ml-1">Agenda</span>
             </button>
           </div>
         </div>
