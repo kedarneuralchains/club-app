@@ -142,7 +142,15 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
 
       {/* Role slots */}
       <div className="p-4 space-y-4">
-        <RoleSection label="🎙️ Prepared Speakers">
+        <RoleSection
+          label="🎙️ Prepared Speakers"
+          hint={speakerRoles.some(({ roleKey, slot }) => claimsMap.has(`${roleKey}:${slot}`)) && (
+            // Badges collapse to icons on mobile (no hover there), so spell them out once.
+            <span className="sm:hidden text-[10px] text-stone-400 whitespace-nowrap">
+              <span className="text-green-700">✓</span> approved · ⏳ VPEd review
+            </span>
+          )}
+        >
           {speakerRoles.map(({ roleKey, slot }) => (
             <RoleSlot
               key={`${roleKey}:${slot}`}
@@ -247,12 +255,15 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
   );
 }
 
-function RoleSection({ label, children }: { label: string; children: React.ReactNode }) {
+function RoleSection({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">
-        {label}
-      </h3>
+      <div className="flex items-baseline justify-between gap-2 mb-2">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-stone-400">
+          {label}
+        </h3>
+        {hint}
+      </div>
       <div className="space-y-1.5">{children}</div>
     </div>
   );
