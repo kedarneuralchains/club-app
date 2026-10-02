@@ -24,7 +24,7 @@ const ADVICE_KEY = (id: string) => `tm_advice_${id}`;
 
 export default function Home() {
   const { meetings, members, ballots, announcement, loading, refetch } = useMeetings();
-  const { memberId, deviceId, loaded, identify, clearIdentity } = useIdentity();
+  const { memberId, deviceId, token, loaded, identify, clearIdentity } = useIdentity();
   const [activeTab, setActiveTab] = useState<Tab>('next');
   const [announceDismissed, setAnnounceDismissed] = useState(true);
   const [showAdvice, setShowAdvice] = useState(false);
@@ -55,9 +55,9 @@ export default function Home() {
   }, [loaded, loading, currentMember?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Picking a name always re-shows the advice modal, even within the same session.
-  function handleSelect(id: string) {
-    if (id !== 'guest') sessionStorage.removeItem(ADVICE_KEY(id));
-    identify(id);
+  function handleSelect(id: string, newToken: string) {
+    sessionStorage.removeItem(ADVICE_KEY(id));
+    identify(id, newToken);
   }
 
   const future = meetings
@@ -211,6 +211,7 @@ export default function Home() {
                   currentMember ? getAdjacentMemberRoles(meetings, m.id, currentMember.id) : []
                 }
                 deviceId={deviceId}
+                memberToken={token}
                 ballot={ballots.get(m.id)}
                 isAdmin={false}
                 hideWhatsApp={activeTab !== 'next'}

@@ -17,16 +17,16 @@ interface Props {
   isLocked: boolean;
   isPast: boolean;
   isAdmin: boolean;
-  // Device that owns claims made here; the DB only lets this device (or an
-  // admin) release a claim or edit its speech details.
-  deviceId?: string | null;
+  // PIN sign-in session token. The DB only lets the member holding a claim
+  // (or an admin) release it or edit its speech details.
+  memberToken?: string | null;
   allMembers?: Member[];
   onChanged: () => void;
 }
 
 export function RoleSlot({
   meetingId, roleKey, slotIndex, claim, memberId, memberExistingRoles,
-  memberAdjacentRoles = [], isLocked, isPast, isAdmin, deviceId = null, allMembers = [], onChanged,
+  memberAdjacentRoles = [], isLocked, isPast, isAdmin, memberToken = null, allMembers = [], onChanged,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [assigning, setAssigning] = useState(false);
@@ -52,23 +52,23 @@ export function RoleSlot({
   const canEditDetails = !!claim && isSpeaker && (isAdmin || (isOwn && !isPast));
 
   async function handleClaim() {
-    if (!memberId || !deviceId || !canClaim || busy) return;
+    if (!memberId || !memberToken || !canClaim || busy) return;
 
     setBusy(true);
 
-    // claim_role sets approval_status itself (speakers start 'pending').
+    // claim_role takes the member from the session token and sets
+    // approval_status itself (speakers start 'pending').
     const { error } = await supabase.rpc('claim_role', {
       p_meeting_id: meetingId,
       p_role_key: roleKey,
       p_slot_index: slotIndex,
-      p_member_id: memberId,
-      p_device_uuid: deviceId,
+      p_token: memberToken,
       p_admin_override: isMultiRole,
     });
 
     if (error) {
       console.error('Supabase error claiming role:', error.message, error.details);
-      alert(`Error claiming role: ${error.message || 'Database schema out of sync. Please apply migration 016_role_claim_ownership.sql.'}`);
+      alert(`Error claiming role: ${error.message || 'Database schema out of sync. Please apply migration 017_member_pins.sql.'}`);
       setBusy(false);
       return;
     }
@@ -108,7 +108,7 @@ export function RoleSlot({
     setBusy(true);
     const { error } = await supabase.rpc('release_role', {
       p_claim_id: claim.id,
-      p_device_uuid: deviceId ?? '',
+      p_token: memberToken ?? '',
     });
     setBusy(false);
     if (error) {
@@ -185,7 +185,7 @@ export function RoleSlot({
           </div>
         </div>
         {claim && isSpeaker && (
-          <SpeechDetailsBlock claim={claim} canEdit={false} deviceId={deviceId} onChanged={onChanged} />
+          <SpeechDetailsBlock claim={claim} canEdit={false} memberToken={memberToken} onChanged={onChanged} />
         )}
       </>
     );
@@ -250,7 +250,7 @@ export function RoleSlot({
           )}
         </div>
         {isSpeaker && (
-          <SpeechDetailsBlock claim={claim} canEdit={canEditDetails} deviceId={deviceId} onChanged={onChanged} />
+          <SpeechDetailsBlock claim={claim} canEdit={canEditDetails} memberToken={memberToken} onChanged={onChanged} />
         )}
       </>
     );
@@ -338,15 +338,15 @@ export function RoleSlot({
 // Read-only for everyone else; owner & admin can edit until the meeting is past.
 // ─────────────────────────────────────────────────────────────────────────────
 function SpeechDetailsBlock({
-  claim, canEdit, deviceId, onChanged,
-}: { claim: RoleClaim; canEdit: boolean; deviceId: string | null; onChanged: () => void }) {
+  claim, canEdit, memberToken, onChanged,
+}: { claim: RoleClaim; canEdit: boolean; memberToken: string | null; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
 
   if (editing) {
     return (
       <SpeechEditor
         claim={claim}
-        deviceId={deviceId}
+        memberToken={memberToken}
         onClose={() => setEditing(false)}
         onSaved={() => { setEditing(false); onChanged(); }}
       />
@@ -386,8 +386,8 @@ function SpeechDetailsBlock({
 }
 
 function SpeechEditor({
-  claim, deviceId, onClose, onSaved,
-}: { claim: RoleClaim; deviceId: string | null; onClose: () => void; onSaved: () => void }) {
+  claim, memberToken, onClose, onSaved,
+}: { claim: RoleClaim; memberToken: string | null; onClose: () => void; onSaved: () => void }) {
   const supabase = createClient();
   const [path, setPath] = useState<string>(claim.path ?? '');
   const [level, setLevel] = useState<string>(claim.speech_level?.toString() ?? '');
@@ -406,7 +406,7 @@ function SpeechEditor({
     setErr(null);
     const { error } = await supabase.rpc('update_speech_details', {
       p_claim_id: claim.id,
-      p_device_uuid: deviceId ?? '',
+      p_token: memberToken ?? '',
       p_path: path || null,
       p_speech_level: level ? Number(level) : null,
       p_project: project.trim() || null,
@@ -416,7 +416,7 @@ function SpeechEditor({
     });
     setBusy(false);
     if (error) {
-      setErr(error.message.startsWith('only the') ? 'Only the speaker\'s own device or an admin can edit this.' : 'Could not save — please retry.');
+      setErr(error.message.startsWith('Only the') ? error.message : 'Could not save — please retry.');
       return;
     }
     onSaved();

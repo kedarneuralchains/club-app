@@ -122,6 +122,7 @@ export interface GuestRegistration {
   name: string | null;
   phone: string;
   email: string;
+  terms_version?: string | null;
   created_at: string;
 }
 

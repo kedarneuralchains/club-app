@@ -157,7 +157,8 @@ Members don't log in, so they can claim a role with one tap from a WhatsApp link
 
 - **Admins sign in with Supabase Auth** (email + password) and must also be listed in the `admins` table. Create the user under *Authentication → Users*, then `insert into admins (email) values ('you@example.com');`. Signing up alone grants nothing.
 - **Admin-only writes are enforced by RLS** via the `is_admin()` function: meetings, members, ballots, announcements and settings. Guest contact details and settings (incl. the Resend key) are readable only by admins.
-- **Member-facing writes go through SECURITY DEFINER functions** (`claim_role`, `release_role`, `update_speech_details`). A claim is tied to the device that made it, so only that device or an admin can release it or edit its speech details, and only admins can approve speakers. Members don't log in, so anyone can still *claim* a role in another member's name — admins can release it.
+- **Members sign in with their name + a 4-digit PIN** (set on first sign-in, bcrypt-hashed, 5 wrong tries → 15-minute lock; admins can reset). Sign-in returns a session token; role writes go through SECURITY DEFINER functions (`claim_role`, `release_role`, `update_speech_details`) that take the member from that token, so nobody can claim in another member's name and only the holder or an admin can release or edit a claim. Only admins can approve speakers.
+- **Consent:** members accept the Terms & Privacy page (`/terms`, version in `lib/terms.ts`) when setting their PIN and again whenever `TERMS_VERSION` changes; acceptances are logged in `member_consents`. Guests tick the same box, and guest records are deleted after 6 months by a pg_cron job.
 - **Votes and guest registration** remain anon inserts.
 - **Vote secrecy is enforced at the database layer** — the `votes` table has no public `select` policy; results are exposed only via the `get_ballot_results` SECURITY DEFINER function which returns aggregates only.
 

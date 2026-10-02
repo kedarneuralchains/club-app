@@ -14,13 +14,15 @@ interface Props {
   memberId: string | null;
   memberAdjacentRoles?: RoleKey[];
   deviceId?: string | null;
+  // PIN sign-in session; required for members to claim/release roles.
+  memberToken?: string | null;
   ballot?: Ballot;
   isAdmin: boolean;
   hideWhatsApp?: boolean;
   onChanged: () => void;
 }
 
-export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles = [], deviceId, ballot, isAdmin, hideWhatsApp, onChanged }: Props) {
+export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles = [], deviceId, memberToken = null, ballot, isAdmin, hideWhatsApp, onChanged }: Props) {
   const [showBallot, setShowBallot] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
   const locked = isMeetingLocked(meeting);
@@ -164,7 +166,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
-              deviceId={deviceId ?? null}
+              memberToken={memberToken}
               allMembers={allMembers}
               onChanged={onChanged}
             />
@@ -185,7 +187,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
-              deviceId={deviceId ?? null}
+              memberToken={memberToken}
               allMembers={allMembers}
               onChanged={onChanged}
             />
@@ -206,7 +208,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
-              deviceId={deviceId ?? null}
+              memberToken={memberToken}
               allMembers={allMembers}
               onChanged={onChanged}
             />
@@ -227,7 +229,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
-              deviceId={deviceId ?? null}
+              memberToken={memberToken}
               allMembers={allMembers}
               onChanged={onChanged}
             />

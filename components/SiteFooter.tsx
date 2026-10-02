@@ -87,6 +87,11 @@ export function SiteFooter() {
           </a>
         </div>
 
+        <p className="text-center">
+          <a href="/terms" className="text-[11px] text-white/40 hover:text-white/70 underline underline-offset-2">
+            Terms &amp; Privacy
+          </a>
+        </p>
       </div>
     </footer>
   );

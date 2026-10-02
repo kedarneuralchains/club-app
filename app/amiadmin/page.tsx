@@ -242,7 +242,7 @@ function MeetingForm({
 
 // ─── Member row ───────────────────────────────────────────────────────────────
 
-function MemberRow({ member, onUpdated }: { member: Member; onUpdated: () => void }) {
+function MemberRow({ member, hasPin, onUpdated }: { member: Member; hasPin: boolean; onUpdated: () => void }) {
   const supabase = createClient();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(member.display_name);
@@ -258,6 +258,15 @@ function MemberRow({ member, onUpdated }: { member: Member; onUpdated: () => voi
 
   async function toggleActive() {
     await supabase.from('members').update({ active: !member.active }).eq('id', member.id);
+    onUpdated();
+  }
+
+  async function resetPin() {
+    if (!confirm(`Reset the PIN for "${member.name}"? They'll be signed out everywhere and set a new PIN on their next sign-in.`)) return;
+    setSaving(true);
+    const { error } = await supabase.rpc('admin_reset_pin', { p_member_id: member.id });
+    setSaving(false);
+    if (error) alert(`Could not reset PIN: ${error.message}`);
     onUpdated();
   }
 
@@ -315,6 +324,15 @@ function MemberRow({ member, onUpdated }: { member: Member; onUpdated: () => voi
           <p className="text-xs text-stone-400">
             WhatsApp name: <span className="text-stone-600">TM {member.display_name}</span>
             <button onClick={() => setEditing(true)} className="ml-1.5 text-maroon-600">Edit</button>
+            <span className="mx-1.5 text-stone-300">·</span>
+            {hasPin ? (
+              <>
+                PIN set
+                <button onClick={resetPin} disabled={saving} className="ml-1.5 text-maroon-600 disabled:opacity-40">Reset</button>
+              </>
+            ) : (
+              <span className="text-stone-300">No PIN yet</span>
+            )}
           </p>
         )}
       </div>
@@ -348,6 +366,7 @@ function AdminPanel() {
   const [members, setMembers] = useState<Member[]>([]);
   const [ballotsMap, setBallotsMap] = useState<Map<string, Ballot>>(new Map());
   const [guestRegs, setGuestRegs] = useState<GuestRegistration[]>([]);
+  const [pinMembers, setPinMembers] = useState<Set<string>>(new Set());
   const [currentAnnouncement, setCurrentAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'meetings' | 'members' | 'guests' | 'announce' | 'settings'>('meetings');
@@ -356,7 +375,7 @@ function AdminPanel() {
   const [memberFilter, setMemberFilter] = useState<'active' | 'all'>('active');
 
   const fetchAll = useCallback(async () => {
-    const [{ data: m }, { data: mb }, { data: bl }, { data: gr }, { data: ann }] = await Promise.all([
+    const [{ data: m }, { data: mb }, { data: bl }, { data: gr }, { data: ann }, { data: pins }] = await Promise.all([
       supabase
         .from('meetings')
         .select('*, role_claims(*, member:members(*))')
@@ -366,11 +385,13 @@ function AdminPanel() {
       supabase.from('ballots').select('*'),
       supabase.from('guest_registrations').select('*').order('created_at', { ascending: false }),
       supabase.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1),
+      supabase.rpc('admin_members_with_pin'),
     ]);
     if (m) setMeetings(m as MeetingWithClaims[]);
     if (mb) setMembers(mb as Member[]);
     if (bl) setBallotsMap(new Map((bl as Ballot[]).map((b) => [b.meeting_id, b])));
     if (gr) setGuestRegs(gr as GuestRegistration[]);
+    if (pins) setPinMembers(new Set(pins as string[]));
     setCurrentAnnouncement((ann as Announcement[] | null)?.[0] ?? null);
     setLoading(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -575,7 +596,7 @@ function AdminPanel() {
 
             <div className="space-y-1.5">
               {displayedMembers.map((m) => (
-                <MemberRow key={m.id} member={m} onUpdated={fetchAll} />
+                <MemberRow key={m.id} member={m} hasPin={pinMembers.has(m.id)} onUpdated={fetchAll} />
               ))}
             </div>
           </div>
