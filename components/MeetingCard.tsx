@@ -245,6 +245,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
         allMembers={allMembers}
         memberId={memberId ?? null}
         deviceId={deviceId ?? null}
+        memberToken={memberToken}
         isAdmin={isAdmin}
         onClose={() => setShowBallot(false)}
       />

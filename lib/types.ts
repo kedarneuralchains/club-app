@@ -40,7 +40,7 @@ export type MeetingType = 'regular' | 'speakathon';
 
 export interface Member {
   id: string;
-  membership_no: string;
+  membership_no?: string; // admin-only (hidden from the public key)
   name: string;
   display_name: string;
   active: boolean;

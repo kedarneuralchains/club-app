@@ -11,6 +11,8 @@ interface Props {
   allMembers: Member[];
   memberId: string | null;
   deviceId: string | null;
+  // PIN session; members vote with it so they can vote only once per ballot.
+  memberToken?: string | null;
   isAdmin?: boolean;
   onClose: () => void;
 }
@@ -35,7 +37,7 @@ const CAT_META: Record<VoteCategory, { label: string; emoji: string }> = {
 const ROLE_PLAYER_KEYS: RoleKey[] = ['tmod', 'ge', 'ttm'];
 const AUX_ROLE_KEYS:    RoleKey[] = ['timer', 'grammarian', 'ah_counter', 'harkmaster'];
 
-export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, isAdmin, onClose }: Props) {
+export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, memberToken = null, isAdmin, onClose }: Props) {
   const supabase = createClient();
   const isClosed = ballot.status === 'closed';
 
@@ -154,25 +156,30 @@ export function BallotModal({ ballot, meeting, allMembers, memberId, deviceId, i
       }
     }
 
-    const rows = categories.map(c => {
+    const votes = categories.map(c => {
       const candidate = c.candidates.find(cand => cand.id === selections[c.key])!;
       return {
-        ballot_id: ballot.id,
-        device_uuid: deviceId,
-        voter_member_id: memberId === 'guest' ? null : memberId,
         category: c.key,
-        voted_for_member_id: candidate.memberId ?? null,
-        voted_for_name: candidate.guestName ?? null,
+        member_id: candidate.memberId ?? null,
+        name: candidate.guestName ?? null,
       };
     });
 
-    const { error } = await supabase.from('votes').insert(rows);
+    // submit_votes (migration 019) identifies members by their PIN session,
+    // enforces one ballot per member and the voter-count cap.
+    const { data: outcome, error } = await supabase.rpc('submit_votes', {
+      p_ballot_id: ballot.id,
+      p_device_uuid: deviceId,
+      p_token: memberId === 'guest' ? null : memberToken,
+      p_votes: votes,
+    });
     if (error) {
-      if (error.code === '23505') {
-        setAlreadyVoted(true);
-      } else {
-        setSubmitError('Something went wrong. Please try again.');
-      }
+      setSubmitError(error.message.startsWith('Please sign in') ? error.message : 'Something went wrong. Please try again.');
+    } else if (outcome === 'already_voted') {
+      setAlreadyVoted(true);
+    } else if (outcome === 'full') {
+      setIsFull(true);
+      setSubmitError(`Voting is full — all ${ballot.voter_count} slots are taken.`);
     } else {
       setSubmitted(true);
     }

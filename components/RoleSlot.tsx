@@ -42,7 +42,6 @@ export function RoleSlot({
       ?? consecutiveRoleBlocked(roleKey, memberAdjacentRoles)
     : null;
   const canClaim = !claim && memberId && !isGuest && (!isLocked || isAdmin) && !blockReason;
-  const isMultiRole = memberExistingRoles.length > 0;
 
   // Speech details only apply to prepared speakers.
   // Editable by the claimant or admin up until the meeting is past (more
@@ -56,44 +55,30 @@ export function RoleSlot({
 
     setBusy(true);
 
-    // claim_role takes the member from the session token and sets
-    // approval_status itself (speakers start 'pending').
-    const { error } = await supabase.rpc('claim_role', {
+    // claim_role takes the member from the session token, re-checks the
+    // lock and pairing rules, and sets approval_status (speakers start 'pending').
+    const { data: claimId, error } = await supabase.rpc('claim_role', {
       p_meeting_id: meetingId,
       p_role_key: roleKey,
       p_slot_index: slotIndex,
       p_token: memberToken,
-      p_admin_override: isMultiRole,
     });
 
     if (error) {
       console.error('Supabase error claiming role:', error.message, error.details);
-      alert(`Error claiming role: ${error.message || 'Database schema out of sync. Please apply migration 017_member_pins.sql.'}`);
+      alert(`Error claiming role: ${error.message || 'Database schema out of sync. Please apply migration 019_server_side_rules.sql.'}`);
       setBusy(false);
       return;
     }
 
-    // Trigger email notification
+    // Email the VPEd; the route looks up the claim itself.
     if (isSpeaker) {
       try {
-        const speakerName = allMembers.find(m => m.id === memberId)?.name || 'Unknown Member';
-        const { data: mtg } = await supabase
-          .from('meetings')
-          .select('number, date')
-          .eq('id', meetingId)
-          .single();
-
-        if (mtg) {
-          await fetch('/api/notify-vped', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              speakerName,
-              meetingNumber: mtg.number,
-              date: mtg.date,
-            }),
-          });
-        }
+        await fetch('/api/notify-vped', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ claimId }),
+        });
       } catch (err) {
         console.error('Notification failed:', err);
       }

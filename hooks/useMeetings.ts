@@ -3,6 +3,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import type { MeetingWithClaims, Member, Ballot } from '@/lib/types';
 
+// The public key can't read membership_no (migration 019), so list columns.
+const MEMBER_PUBLIC_COLS = 'id, name, display_name, active, deleted, created_at';
+
 export function useMeetings() {
   const [meetings, setMeetings] = useState<MeetingWithClaims[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -16,10 +19,10 @@ export function useMeetings() {
     const [{ data: meetingsData }, { data: membersData }, { data: ballotsData }, { data: annData }] = await Promise.all([
       supabase
         .from('meetings')
-        .select('*, role_claims(*, member:members(*))')
+        .select(`*, role_claims(*, member:members(${MEMBER_PUBLIC_COLS}))`)
         .order('number', { ascending: false })
         .limit(20),
-      supabase.from('members').select('*').eq('active', true).eq('deleted', false).order('name'),
+      supabase.from('members').select(MEMBER_PUBLIC_COLS).eq('active', true).eq('deleted', false).order('name'),
       supabase.from('ballots').select('*'),
       supabase
         .from('announcements')

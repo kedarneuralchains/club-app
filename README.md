@@ -159,7 +159,10 @@ Members don't log in, so they can claim a role with one tap from a WhatsApp link
 - **Admin-only writes are enforced by RLS** via the `is_admin()` function: meetings, members, ballots, announcements and settings. Guest contact details and settings (incl. the Resend key) are readable only by admins.
 - **Members sign in with their name + a 4-digit PIN** (set on first sign-in, bcrypt-hashed, 5 wrong tries → 15-minute lock; admins can reset). Sign-in returns a session token; role writes go through SECURITY DEFINER functions (`claim_role`, `release_role`, `update_speech_details`) that take the member from that token, so nobody can claim in another member's name and only the holder or an admin can release or edit a claim. Only admins can approve speakers.
 - **Consent:** members accept the Terms & Privacy page (`/terms`, version in `lib/terms.ts`) when setting their PIN and again whenever `TERMS_VERSION` changes; acceptances are logged in `member_consents`. Guests tick the same box, and guest records are deleted after 6 months by a pg_cron job.
-- **Votes and guest registration** remain anon inserts.
+- **Rules are enforced in the database**, not just the UI: claims respect the meeting lock (start time IST), the role-pairing limits and the no-back-to-back rotation; releases lock at start time; speech details lock at 2 PM IST.
+- **Votes go through `submit_votes`**: signed-in members vote once per ballot on any device; guests vote once per browser; the voter-count cap is checked server-side.
+- **Membership numbers** aren't readable with the publishable key (column-level grant).
+- **`/api/notify-vped`** takes only a claim id, builds the email from the database and sends at most one email per fresh pending speaker claim.
 - **Vote secrecy is enforced at the database layer** — the `votes` table has no public `select` policy; results are exposed only via the `get_ballot_results` SECURITY DEFINER function which returns aggregates only.
 
 PRs welcome.
