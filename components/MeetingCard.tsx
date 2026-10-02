@@ -164,6 +164,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
+              deviceId={deviceId ?? null}
               allMembers={allMembers}
               onChanged={onChanged}
             />
@@ -184,6 +185,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
+              deviceId={deviceId ?? null}
               allMembers={allMembers}
               onChanged={onChanged}
             />
@@ -204,6 +206,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
+              deviceId={deviceId ?? null}
               allMembers={allMembers}
               onChanged={onChanged}
             />
@@ -224,6 +227,7 @@ export function MeetingCard({ meeting, allMembers, memberId, memberAdjacentRoles
               isLocked={locked}
               isPast={past}
               isAdmin={isAdmin}
+              deviceId={deviceId ?? null}
               allMembers={allMembers}
               onChanged={onChanged}
             />
